@@ -1,0 +1,99 @@
+title:: DunnOsc
+summary:: chaotic oscillator.
+related:: Classes/RHPF
+categories:: UGens>Oscillators, UGens>Generators>Deterministic
+
+
+DESCRIPTION::
+Chaotic oscillator from David Dunn's "Thresholds and Fragile States" (2010).
+
+"Thresholds and Fragile States" is an analog electronic circuit network of
+eight oscillators. This UGen is the basic building block of a larger project
+to model the behavior of the entire circuit network.
+
+eq: w = -Az - y - Bx + Csgn(x), where x, y, z, w = x, x', x'', x'''
+
+Numerical solution by a modified Euler method in which one of the integration
+stages is replaced with a discrete time filter in order to better model a passive
+RC integrator used in the physical implementation of the built circuitry.
+
+Oscillator designed by Julian Sprott [cite] and built by David Dunn [cite].
+
+David Kant, 2016
+
+CLASSMETHODS::
+private:: categories
+
+
+METHOD:: ar
+Oscillator output is three signals: x, y, z.
+WARNING:: z output is considerably LOUDER than x and y.::
+
+ARGUMENT:: r
+Resistance value controls oscillator state. Range is [0.0, +∞] but most of the states occur in [0.0, 40.0].
+
+ARGUMENT:: freq
+Resonant frequency in unnamed units [0.0, 1.0].
+
+ARGUMENT:: error
+Degree of error in the numerical approximation. Values below 0.5 require A LOT of computation.
+
+
+EXAMPLES::
+
+phase scope:
+code::
+(
+// synth
+y = { DunnOsc.ar(r: MouseY.kr(45,0))[0..1] }.play; // mouse control of r
+
+// scope
+d = Stethoscope.new(s);
+d.size_(450);
+d.style_(2);
+d.yZoom_(2.5);
+d.xZoom_(2.0);
+d.scopeView.background_(Color.new(0.15, 0.15, 0.15));
+d.scopeView.waveColors_([Color.white]);
+d.view.alwaysOnTop_(true);
+d.view.onClose = {y.free;}.addFunc(d.view.onClose);
+)
+::
+
+waveform scope:
+code::
+(
+// synth
+y = { DunnOsc.ar(r: MouseY.kr(45,0))[0..1] }.play; // mouse control of r
+
+// scope
+d = Stethoscope.new(s, numChannels:2);
+d.size_(450);
+d.style_(1);
+d.yZoom_(2.0);
+d.xZoom_(2.0);
+d.scopeView.background_(Color.new(0.15, 0.15, 0.15));
+d.scopeView.waveColors_([Color.magenta, Color.cyan]);
+d.view.alwaysOnTop_(true);
+d.view.onClose = {y.free;}.addFunc(d.view.onClose);
+)
+::
+
+large error can make the oscillator unstable:
+code::
+(
+// synth
+y = { DunnOsc.ar(r: 14.3, error: MouseY.kr(10,0.5))[0..1] }.play; // mouse control of error
+
+// scope
+d = Stethoscope.new(s);
+d.size_(450);
+d.style_(2);
+d.yZoom_(2.5);
+d.xZoom_(2.0);
+d.scopeView.background_(Color.new(0.15, 0.15, 0.15));
+d.scopeView.waveColors_([Color.white]);
+d.view.alwaysOnTop_(true);
+d.view.onClose = {y.free;}.addFunc(d.view.onClose);
+)
+::
