@@ -95,9 +95,9 @@ void DunnOsc_next(DunnOsc *unit, int inNumSamples) {
     float *outZ = ZOUT(2);
     
     // input buffers
-    double r = ZIN0(0);      // a coeff
-    double freq = ZIN0(1);   // b coeff
-    double error = ZIN0(2);  // c coeff
+    double r = ZIN0(0);      // variable resistance value   
+    double freq = ZIN0(1);   // oscillator frequency
+    double error = ZIN0(2);  // numerical solution error
     
     // internals
     double h;          // h timestep
