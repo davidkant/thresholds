@@ -1,0 +1,72 @@
+title:: PowerAmp386
+summary:: Power Amplifier IC LM386.
+related:: Classes/RHPF
+categories:: UGens>Generators>Deterministic
+
+
+DESCRIPTION::
+LM386 Power Amplifier from David Dunn's "Thresholds and Fragile States" (2010)
+
+Features:
+list::
+  ## voltage divider
+  ## gain
+  ## amp saturation
+  ## DC leak
+::
+
+from "Thresholds" library
+
+dkant, 2016
+
+
+CLASSMETHODS::
+private:: categories
+
+METHOD:: ar
+
+ARGUMENT:: in
+The input signal.
+
+ARGUMENT:: val
+Potentiometer value, normalized range [0, 1].
+
+ARGUMENT:: gain
+Max gain at val = 1.0. Output signal is multiplied by gain and scaled by voltage divider.
+
+ARGUMENT:: potRmin
+Potentiometer minimimum resistance.
+
+ARGUMENT:: potRmax
+Potentiometer maximum resistance.
+
+ARGUMENT:: saturation
+Saturation level.
+
+ARGUMENT:: leakCoef
+Leak coefficient.
+
+
+EXAMPLES::
+
+amplified sinusoid:
+code::
+(
+// synth
+y = { var sig = SinOsc.ar(258.7/1.5, mul: 0.2);
+    Out.ar(0, [sig, PowerAmp386.ar(sig, val: MouseY.kr(0, 1))]);
+}.play;
+
+// scope
+d = Stethoscope.new(s, numChannels: 2);
+d.size_(450);
+d.style_(1);
+d.yZoom_(1.0);
+d.xZoom_(2.0);
+d.scopeView.background_(Color.new(0.15, 0.15, 0.15));
+d.scopeView.waveColors_([Color.cyan, Color.magenta]);
+d.scopeView.fill_(true);
+d.view.alwaysOnTop_(true);
+d.view.onClose = {y.free;}.addFunc(d.view.onClose);
+)
+::
