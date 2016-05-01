@@ -1,7 +1,6 @@
 title:: PowerAmp386
 summary:: Power Amplifier IC LM386.
-related:: Classes/RHPF
-categories:: UGens>Generators>Deterministic
+related:: Classes/Mixer741
 
 
 DESCRIPTION::
@@ -15,9 +14,7 @@ list::
   ## DC leak
 ::
 
-from "Thresholds" library
-
-dkant, 2016
+from "Thresholds" library  -dkant, 2016
 
 
 CLASSMETHODS::
@@ -43,8 +40,8 @@ Potentiometer maximum resistance.
 ARGUMENT:: saturation
 Saturation level.
 
-ARGUMENT:: leakCoef
-Leak coefficient.
+ARGUMENT:: dcblock
+DC leak coefficient.
 
 
 EXAMPLES::
