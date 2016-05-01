@@ -2,16 +2,14 @@
 
  LM386 Power Amplifier from David Dunn's "Thresholds and Fragile States" (2010)
 
- Features:
+ features:
 
    * voltage divider
    * gain
    * amp saturation
    * DC leak
 
- from "Thresholds" library
-
- dkant, 2016
+ from "Thresholds" library  -dkant, 2016
 
 
  TOOD
