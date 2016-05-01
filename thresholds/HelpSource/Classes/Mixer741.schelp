@@ -1,0 +1,79 @@
+title:: Mixer741
+summary:: Mixer IC LM741.
+related:: Classes/PowerAmp386
+
+
+DESCRIPTION::
+LM741 Mixer from David Dunn's "Thresholds and Fragile States" (2010)
+
+Mixes an array of input signals. Input is an array of any length.
+
+Features:
+list::
+  ## mix input signals
+  ## op-amp saturation
+  ## invert
+  ## DC leak (b/c capacitor at amp output)
+::
+
+from "Thresholds" library  -dkant, 2016
+
+
+CLASSMETHODS::
+private:: categories
+
+METHOD:: ar
+
+ARGUMENT:: in
+Array of input signals.
+
+ARGUMENT:: saturation
+Op-amp saturation level.
+
+ARGUMENT:: dcblock
+DC leak coefficient.
+
+
+EXAMPLES::
+
+mixed sinusoid:
+code::
+(
+// scope busses
+var sbus = Bus.audio(s, 4);
+
+// synth
+y = { var sig1, sig2, sig3, mix, freq;
+
+    // fund freq
+    freq = 2*258.7;
+
+    // sigs to mix
+    sig1 = SinOsc.ar(freq*1.0, mul: 0.33);
+    sig2 = SinOsc.ar(freq*2.0, mul: 0.33);
+    sig3 = SinOsc.ar(freq*3.0, mul: 0.33);
+
+    // mix
+    mix =  Mixer741.ar([sig1, sig2, sig3]);
+
+    // audio monitor output
+    Out.ar(0, [mix, mix]*0.33);
+
+    // function outputs sep channels
+    [sig1, sig2, sig3, mix];
+
+}.play(outbus: sbus);
+
+// scope
+d = Stethoscope.new(s, numChannels: 4, index: sbus.index);
+d.size_(450);
+d.style_(0);
+d.yZoom_(1.0);
+d.xZoom_(1.0);
+d.scopeView.background_(Color.new(0.15, 0.15, 0.15));
+d.scopeView.waveColors_([Color.cyan, Color.magenta, Color.yellow, Color.white]);
+d.scopeView.fill_(true);
+d.view.alwaysOnTop_(true);
+d.view.onClose = {y.free;}.addFunc(d.view.onClose);
+)
+::
