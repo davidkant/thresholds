@@ -27,7 +27,7 @@
 PowerAmp386 {
 
     *ar { |in, val = 0.5, gain = 20, potRmin = 0, potRmax = 10e3,
-        saturation = 0.44444444444444, leakCoef = 0.995, mul = 1, add = 0|
+        saturation = 0.44444444444444, dcblock = 0.995, mul = 1, add = 0|
 
         var r1, r2, vdivider, out;
 
@@ -45,7 +45,7 @@ PowerAmp386 {
         out = Clip.ar(out, -1*saturation, saturation);
 
         // DC leak
-        out = LeakDC.ar(out, coef: leakCoef);
+        out = LeakDC.ar(out, coef: dcblock);
 
         // out
         ^out
