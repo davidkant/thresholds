@@ -13,9 +13,12 @@
 
  from "Thresholds" library  -dkant, 2016
 
+ TUNING:
+ - saturation is actual measured
+ - dcblock is a guess
 
  TOOD
- -> measure the saturation
+ -> confirm measure the saturation
  ?? is saturation absolute or relative to supply?
  -> add schematic image to help page
 
