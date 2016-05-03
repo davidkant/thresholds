@@ -11,11 +11,20 @@
 
  from "Thresholds" library  -dkant, 2016
 
+ NOTE:
+ - val is downsampled to control rate
+
+ TUNING:
+ - set potRMin to match the analog circuit
+ - gain is theoretical calculated from circuit topology
+ - saturation is actual measured
+ - dcblock is a guess
 
  TOOD
  ?? gain is linear w/ amplitude not db scale?
  -> audio taper pot use log / exp curve
- -> measure the saturation
+ -> confirm measure the saturation
+ -> measure dcblock
  ?? is saturation absolute or relative to supply?
  -> potRmin/max is redundant...
  -> add schematic image to help page
@@ -29,7 +38,7 @@ PowerAmp386 {
 
         var r1, r2, vdivider, out;
 
-        // r1  and r2 from pot value (0-1)
+        // r1 and r2 from pot value [0,1]
         r1 = LinLin.kr(1-val, 0, 1, potRmin, potRmax);
         r2 = LinLin.kr(val, 0, 1, potRmin, potRmax);
 
