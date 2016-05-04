@@ -1,0 +1,94 @@
+title:: LowPass741
+summary:: Low-Pass Filter IC LM741
+related:: Classes/Mixer741, Classes/PowerAmp386
+
+
+DESCRIPTION::
+LM741 Low-Pass Filter from David Dunn's "Thresholds and Fragile States" (2010)
+
+Dunn's circuit topology is a Sallen-Key low-pass filter with component values:
+
+list::
+  ## teletype::r1 = 8k::
+  ## teletype::r2 = 100k variable potentiometer::
+  ## teletype::c1 = 0.1 uF::
+  ## teletype::c2 = 0.1 uF::
+::
+
+This software implementation uses SC's LPF (second order Butterworth) to model.
+Center freq is calculated from potentiometer value according to the formula:
+
+teletype::
+  freq = 1 / ( 2 * pi * sqrt(r1 * r2 * c1 * c2) )
+
+  with R in ohms and C in farads [1 uf = e-6 farad]
+::
+
+from "Thresholds" library  -dkant, 2016
+
+
+CLASSMETHODS::
+private:: categories
+
+METHOD:: ar
+
+ARGUMENT:: in
+The input signal.
+
+ARGUMENT:: val
+Potentiometer value, normalized range [0, 1].
+
+ARGUMENT:: potRmin
+Potentiometer minimimum resistance.
+
+ARGUMENT:: potRmax
+Potentiometer maximum resistance.
+
+ARGUMENT:: r1
+Resistor 1 value.
+
+ARGUMENT:: c1
+Capacitor 1 value.
+
+ARGUMENT:: c2
+Capacitor 2 value.
+
+
+EXAMPLES::
+
+filtered square wave:
+code::
+(
+// scope busses
+var scopeBus = Bus.audio(s, 2);
+
+// synth
+y = { var sig, filtered;
+
+    // source signal
+    sig = Pulse.ar(258.7/1.5, width: 0.5, mul: 0.2);
+
+    // low-pass filter
+    filtered = LowPass741.ar(sig, val: MouseY.kr(0, 1));
+
+    // audio monitor output
+    Out.ar(0, [filtered, filtered]);
+
+    // scope output
+    [sig, filtered];
+
+}.play(outbus: scopeBus);
+
+// scope
+d = Stethoscope.new(s, numChannels: 2, index: scopeBus.index);
+d.size_(450);
+d.style_(1);
+d.yZoom_(1.0);
+d.xZoom_(1.0);
+d.scopeView.background_(Color.new(0.15, 0.15, 0.15));
+d.scopeView.waveColors_([Color.cyan, Color.magenta]);
+d.scopeView.fill_(true);
+d.view.alwaysOnTop_(true);
+d.view.onClose = {y.free;}.addFunc(d.view.onClose);
+)
+::
