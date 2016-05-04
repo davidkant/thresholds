@@ -34,7 +34,7 @@ LowPass741 {
         var r2, freq;
 
         // r2 from pot value [0,1]
-        r2 = LinLin.kr(knob, 0, 1, potRmin, potRmax);
+        r2 = LinLin.kr(val, 0, 1, potRmin, potRmax);
 
         // cutoff frequency in Hertz
         freq = 1 / ( 2 * pi * (r1 * r2 * c1 * c2).sqrt );
