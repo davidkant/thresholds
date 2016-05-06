@@ -1,0 +1,84 @@
+title:: LFOsc555
+summary:: LFO Oscillator IC LM555
+related:: Classes/Mixer741, Classes/PowerAmp386, Classes/LowPass741
+
+DESCRIPTION::
+
+LM555 LFO from David Dunn's "Thresholds and Fragile States" (2010)
+
+Dunn's circuit topology is a basic astable 555 oscillator circuit with
+component values:
+
+list::
+  ## teletype:: r1 = 1k ::
+  ## teletype:: r2 = 1M variable potentiometer ::
+  ## teletype:: c = 10 uF or 0.22 uF (given switch position) ::
+::
+
+This software implementation uses SC's LFPulse pulse oscillator to model.
+Freq is calculated from potentiometer value teletype::r2:: according to the formula:
+
+teletype::
+  freq = 1.44 / ( (r1 + 2 * r2) * c )
+
+  with R in ohms and C in farads [1 uf = e-6 farad]
+::
+
+from "Thresholds" library  -dkant, 2016
+
+
+CLASSMETHODS::
+private:: categories
+
+METHOD:: ar
+
+ARGUMENT:: val
+Variable potentiometer value teletype::r2:: (normalized [0,1]) determines oscillator freqeuency.
+
+ARGUMENT:: cswitch
+Hi/Lo frequency switch determines capacitor teletype::c::. Position teletype::0:: is
+teletype::10 uF:: (low freq) and position teletype::1:: is teletype::0.22 uF:: (high freq).
+
+ARGUMENT:: potRmin
+Potentiometer minimimum resistance.
+
+ARGUMENT:: potRmax
+Potentiometer maximum resistance.
+
+ARGUMENT:: r1
+Resistor 1 value.
+
+ARGUMENT:: c1
+Capacitor 1 value (switch position 0).
+
+ARGUMENT:: c2
+Capacitor 2 value (switch position 1).
+
+
+EXAMPLES::
+
+LFO w/ toggle:
+code::
+(
+// synth
+y = { arg cswitch = 0;
+    LFOsc555.ar(val: MouseY.kr(0, 1), cswitch: cswitch, mul: 0.33)
+}.play();
+
+// scope
+d = Stethoscope.new(s, numChannels: 1);
+d.size_(450);
+d.style_(1);
+d.yZoom_(1.0);
+d.xZoom_(1.0);
+d.scopeView.background_(Color.new(0.15, 0.15, 0.15));
+d.scopeView.waveColors_([Color.cyan, Color.magenta]);
+d.scopeView.fill_(true);
+d.view.alwaysOnTop_(true);
+d.view.onClose = {y.free;}.addFunc(d.view.onClose);
+)
+
+// toggle switch
+y.set(\cswitch, 0) // low freq
+y.set(\cswitch, 1) // hi freq
+::
