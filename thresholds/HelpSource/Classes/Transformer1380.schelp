@@ -1,0 +1,84 @@
+title:: Transformer1380
+summary:: Audio Output Transformer RadioShack #273-1380
+related:: Classes/Mixer741, Classes/PowerAmp386, LowPass741
+
+DESCRIPTION::
+
+Audio Transformer from David Dunn's "Thresholds and Fragile States" (2010)
+
+Transformer is RadioShack Audio Output Tranformer #273-1380 with specs:
+
+list::
+  ## input: 1K
+  ## output: center-tapped to 8ohms
+  ## frequency response 300 - 10k
+::
+
+Features:
+
+list::
+  ## step-up
+  ## frequency response: high-pass filter
+  ## frequency response: low-pass filter
+  ## blocks dc signal
+::
+
+from "Thresholds" library  -dkant, 2016
+
+
+CLASSMETHODS::
+private:: categories
+
+METHOD:: ar
+
+ARGUMENT:: in
+The input signal.
+
+ARGUMENT:: stepUp
+Transformer voltage steup-up ratio.
+
+ARGUMENT:: minFreq
+Frequency response minimum determines high-pass filter cutoff frequency (in Hertz).
+
+ARGUMENT:: maxFreq
+Frequency response maximnum determines low-pass filter cutoff frequency (in Hertz).
+
+
+EXAMPLES::
+
+transformer square wave:
+code::
+(
+// scope busses
+var scopeBus = Bus.audio(s, 2);
+
+// synth
+y = { var sig, transformered;
+
+    // source signal
+    sig = Pulse.ar(258.7/1.5, width: 0.5, mul: 0.0666);
+
+    // transformer
+    transformered = Transformer1380.ar(sig);
+
+    // audio monitor output
+    Out.ar(0, [transformered, transformered]);
+
+    // scope output
+    [sig, transformered];
+
+}.play(outbus: scopeBus);
+
+// scope
+d = Stethoscope.new(s, numChannels: 2, index: scopeBus.index);
+d.size_(450);
+d.style_(1);
+d.yZoom_(1.0);
+d.xZoom_(1.0);
+d.scopeView.background_(Color.new(0.15, 0.15, 0.15));
+d.scopeView.waveColors_([Color.cyan, Color.magenta]);
+d.scopeView.fill_(true);
+d.view.alwaysOnTop_(true);
+d.view.onClose = {y.free;}.addFunc(d.view.onClose);
+)
+::
