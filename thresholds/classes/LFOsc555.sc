@@ -14,6 +14,7 @@
 
  from "Thresholds" library  -dkant, 2016
 
+
  NOTE:
  - val and switch are downsampled to control rate
 
