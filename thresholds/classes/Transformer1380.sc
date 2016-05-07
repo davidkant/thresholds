@@ -2,18 +2,17 @@
 
  Audio Transformer from David Dunn's "Thresholds and Fragile States" (2010)
 
- specs:
+ Transformer is RadioShack Audio Output Tranformer #273-1380 with specs:
 
-   * Radio-Shack part #273-1380
    * input: 1K
    * output: center-tapped to 8ohms
-   * frequency response 300 - 10k
+   * frequency response: 300 - 10k
 
  features:
 
    * step-up
-   * high-pass filter
-   * low-pass filter
+   * frequency response: high-pass filter
+   * frequency response: low-pass filter
    * blocks dc signal
 
  from "Thresholds" library  -dkant, 2016
@@ -35,9 +34,21 @@
 
 Transformer1380 {
 
-    *ar { |in, stepUp = 10, highPass = 300, lowPass = 1e4, mul = 1, add = 0|
+    *ar { |in, stepUp = 10, minFreq = 300, maxFreq = 1e4, dcblock = 0.995,
+        mul = 1, add = 0|
 
-        // step-up, low-pass, and high-pass
-        ^HPF.ar(LPF.ar(in * stepUp, lowPass), highPass);
+        var out;
+
+        // step up
+        out = in * stepUp;
+
+        // frequency response: low-pass and high-pass
+        out = HPF.ar(LPF.ar(out, maxFreq), minFreq);
+
+        // DC leak
+        out = LeakDC.ar(out, coef: dcblock);
+
+        // out
+        ^out;
     }
 }
