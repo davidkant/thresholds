@@ -8,7 +8,7 @@
 
    * mix input signals
    * op-amp saturation
-   * invert
+   * inverts signal
    * DC leak (b/c capacitor at amp output)
 
  from "Thresholds" library  -dkant, 2016
