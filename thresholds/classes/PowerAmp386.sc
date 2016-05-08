@@ -22,6 +22,7 @@
  - dcblock is a guess
 
  TOOD
+ -> large DC offset pre-capacitor may cause asymmetric saturation
  ?? gain is linear w/ amplitude not db scale?
  -> audio taper pot use log / exp curve
  -> confirm measure the saturation
