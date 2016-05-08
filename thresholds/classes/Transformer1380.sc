@@ -11,24 +11,24 @@
  features:
 
    * step-up
-   * frequency response: high-pass filter
-   * frequency response: low-pass filter
-   * blocks dc signal
+   * frequency response => low-/high-pass filters
+   * inverts signal
+   * blocks DC signal
 
  from "Thresholds" library  -dkant, 2016
 
 
  TUNING:
- - step-up is measured
- - high-pass and low-pass are from spec sheet
- - dcblock is a guess
+ - step-up is measured / observed ~10x maybe a little less
+ - frequency response is from spec sheet
+ - dcblock coefficient is a guess
 
  TOOD
+ -> observed asymmetric saturation soft limit
  -> confirm center tap is the output used
- -> confirm step-up by measure and calc
- ?? does it invert ??
- ?? this one doesn't do the curve b-h ??
- ?? better model / other features to odel ??
+ -> cal step-up to confirm measured / observed
+ ?? b-h curve?
+ ?? other transformer features?
 
 */
 
@@ -44,6 +44,9 @@ Transformer1380 {
 
         // frequency response: low-pass and high-pass
         out = HPF.ar(LPF.ar(out, maxFreq), minFreq);
+
+        // invert
+        out = out.neg;
 
         // DC leak
         out = LeakDC.ar(out, coef: dcblock);
