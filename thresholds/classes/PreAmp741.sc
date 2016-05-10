@@ -14,10 +14,14 @@
    * saturation
    * inverts signal
 
- This preamplifier is also a point of signal coupling between oscillators b/c
- the resistance network input is coupled to the op-amp inverting input and the
- resistance network output is coupled to the op-amp output. This is implemented
- through rNetSigIn and rNetResIn.
+ The pre-amplifier is a point of signal coupling between oscillator pairs
+ through a emphasis::resistance network::. The resistance network makes contact
+ to the op-amp inverting input allowing pre-amplifiers to be coupled. In Dunn's
+ network,  pre-amplifiers from separate oscillator pairs are coupled.
+
+ This is implemented as teletype::rNetSigIn:: and teletype::rNetResIn::. It is
+ necessary to know both the voltage and resistance of coupled signals in order
+ to calculate the gain across pre-amplifiers.
 
  from "Thresholds" library  -dkant, 2016
 
