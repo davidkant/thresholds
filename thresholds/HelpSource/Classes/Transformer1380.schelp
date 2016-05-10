@@ -1,6 +1,6 @@
 title:: Transformer1380
 summary:: Audio Output Transformer RadioShack #273-1380
-related:: Classes/Mixer741, Classes/PowerAmp386, LowPass741
+related:: Classes/Mixer741, Classes/PowerAmp386, Classes/LowPass741
 
 DESCRIPTION::
 
@@ -42,6 +42,9 @@ Frequency response minimum determines high-pass filter cutoff frequency (in Hert
 
 ARGUMENT:: maxFreq
 Frequency response maximnum determines low-pass filter cutoff frequency (in Hertz).
+
+ARGUMENT:: dcblock
+DC leak coefficient.
 
 
 EXAMPLES::
