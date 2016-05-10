@@ -70,4 +70,73 @@ Saturation level.
 EXAMPLES::
 
 amplified sinusoid:
+code::
+(
+// synth
+y = { var sig = SinOsc.ar(258.7/1.5, mul: 0.2);
+    Out.ar(0, [sig, PreAmp741.ar(sig, val: MouseY.kr(0, 1))]);
+}.play;
+
+// scope
+d = Stethoscope.new(s, numChannels: 2);
+d.size_(450);
+d.style_(1);
+d.yZoom_(1.0);
+d.xZoom_(2.0);
+d.scopeView.background_(Color.new(0.15, 0.15, 0.15));
+d.scopeView.waveColors_([Color.cyan, Color.magenta]);
+d.scopeView.fill_(true);
+d.view.alwaysOnTop_(true);
+d.view.onClose = {y.free;}.addFunc(d.view.onClose);
+)
+::
+
 coupled pre-amplifiers:
+code::
+(
+/*
+The two source signals are in cyan + magenta and the
+pre-amps are in white. Each pre-amp output is a mix
+of the two input signals due to the coupling between
+them.
+*/
+
+// scope busses
+var scopeBus = Bus.audio(s, 4);
+
+// synth
+y = { var sig1, sig2, amp1, amp2, val1, val2;
+
+    sig1 = SinOsc.ar(258.7/1.5*1, mul: 0.2); // test signal 1
+    sig2 = SinOsc.ar(258.7/1.5*2, mul: 0.2); // test signal 2
+
+    val1 = MouseY.kr(0, 1); // Y control amp 1 potentiometer
+    val2 = MouseX.kr(0, 1); // X control amp 2 potentiometer
+
+    amp1 = PreAmp741.ar(sig1, val: val1, rNetSigIn: sig2,
+        rNetResIn: val2);
+    amp2 = PreAmp741.ar(sig2, val: val2, rNetSigIn: sig1,
+        rNetResIn: val1);
+
+    // audio monitor output
+    Out.ar(0, [amp1, amp2]);
+
+    // scope output
+    [sig1, sig2, amp1, amp2]
+
+}.play(outbus: scopeBus);
+
+// scope
+d = Stethoscope.new(s, numChannels: 4, index: scopeBus.index);
+d.size_(450);
+d.style_(0);
+d.yZoom_(1.0);
+d.xZoom_(2.0);
+d.scopeView.background_(Color.new(0.15, 0.15, 0.15));
+d.scopeView.waveColors_([Color.cyan, Color.magenta,
+    Color.white, Color.white]);
+d.scopeView.fill_(true);
+d.view.alwaysOnTop_(true);
+d.view.onClose = {y.free;}.addFunc(d.view.onClose);
+)
+::
