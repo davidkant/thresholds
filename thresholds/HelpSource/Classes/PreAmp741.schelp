@@ -1,0 +1,73 @@
+title:: PreAmp741
+summary:: Pre-Amplifier IC LM741
+related:: Classes/Mixer741, Classes/PowerAmp386
+
+DESCRIPTION::
+
+LM741 Pre-Amplifier from David Dunn's "Thresholds and Fragile States" (2010)
+
+Dunn's circuit topology is a basic inverting amplifier with component values:
+teletype:: rin = 1k :: and teletype:: rf = 100k variable potentiometer::.
+
+Features:
+
+list::
+  ## gain
+  ## saturation
+  ## inverts signal
+  ## resistance network coupling
+::
+
+Gain is calculated according to the formula:
+
+teletype::
+  gain = rf / rin, with R in ohms
+::
+
+SUBSECTION::Resistance Network
+The pre-amplifier is a point of signal coupling between oscillator pairs
+through a emphasis::resistance network::. The resistance network makes
+contact to the op-amp inverting input allowing pre-amplifiers to be coupled.
+In Dunn's network, pre-amplifiers from separate oscillator pairs are coupled.
+
+This is implemented as teletype::rNetSigIn:: and teletype::rNetResIn::. It
+is necessary to know both the voltage and resistance of coupled signals in
+order to calculate the gain across pre-amplifiers.
+
+from "Thresholds" library  -dkant, 2016
+
+
+CLASSMETHODS::
+private:: categories
+
+METHOD:: ar
+
+ARGUMENT:: in
+The input signal.
+
+ARGUMENT:: val
+Potentiometer value determines teletype::gain:: from teletype::rin:: and teletype::rf::.
+
+ARGUMENT:: rNetSigIn
+Audio signal input to resistance network.
+
+ARGUMENT:: rNetResIn
+Resistance input to resistance network.
+
+ARGUMENT:: potRmin
+Potentiometer minimimum resistance.
+
+ARGUMENT:: potRmax
+Potentiometer maximum resistance.
+
+ARGUMENT:: r2
+Resistor 2 value is the minimum teletype::rf::, or offset.
+
+ARGUMENT:: saturation
+Saturation level.
+
+
+EXAMPLES::
+
+amplified sinusoid:
+coupled pre-amplifiers:
