@@ -45,8 +45,8 @@
 
 PreAmp741 {
 
-    *ar { |in, val = 0.5, rNetSigIn, rNetResIn, potRmin = 1, potRmax = 100e3,
-        r2 = 1e3, saturation = 0.85, mul = 1, add = 0|
+    *ar { |in, val = 0.5, rNetSigIn = 0, rNetResIn = 0.5, potRmin = 1,
+        potRmax = 100e3, r2 = 1e3, saturation = 0.85, mul = 1, add = 0|
 
         var rf, rin, gain, rNetGain, out;
 
@@ -60,10 +60,13 @@ PreAmp741 {
         gain = rf / rin;
 
         // rNet (normalized pot position in assumes same pot strength)
-        rNetGain = rf / r2 + LinLin.kr(1-rNetResIn, 0, 1, potRmin, potRmax);
+        rNetGain = rf / (r2 + LinLin.kr(1-rNetResIn, 0, 1, potRmin, potRmax));
 
         // apply gain and saturation
         out = Clip.ar((in * gain) + (rNetSigIn * rNetGain), -1*saturation, saturation);
+
+        // invert
+        out = out.neg();
 
         // out
         ^out

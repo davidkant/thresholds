@@ -37,6 +37,7 @@
    ?? do we need local copies for computation?
    ?? is ZXP inefficient double incrememnt cuz already counting numsamples?
    -> more intelligent oversampling interpolation please
+   -> explanation: r determines equation coefficients C
  
 */
 
@@ -95,7 +96,7 @@ void DunnOsc_next(DunnOsc *unit, int inNumSamples) {
     float *outZ = ZOUT(2);
     
     // input buffers
-    double r = ZIN0(0);      // variable resistance value   
+    double r = ZIN0(0);      // variable resistance value
     double freq = ZIN0(1);   // oscillator frequency
     double error = ZIN0(2);  // numerical solution error
     
@@ -165,7 +166,6 @@ void DunnOsc_next(DunnOsc *unit, int inNumSamples) {
     unit->ynm1 = ynm1;
     unit->znm1 = znm1;
 }
-
 
 // load --------------------------------------------------------------------- //
 PluginLoad(DunnOsc)
