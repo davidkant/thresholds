@@ -11,9 +11,9 @@
 
  features
 
-   * voltage to resistance response
+   * half-wave rectify (diode)
+   * voltage to resistance response measured from actual optoisolator
    * asymmetric attack / release lag times
-   * inverts signal
    - hysteresis [NOT YET IMPLEMENTED]
    - freq dependent lag [NOT YET IMPLEMENTED]
 
@@ -24,6 +24,7 @@
 
  NOTE
  - attack / decay in seconds
+ - signal is essentially inverted b/c hi voltage -> hi illum -> low resistance
 
  TODO
  -> FEATURE implement hysteresis
@@ -62,7 +63,7 @@ Vactrol {
 
     *v2r { |in = 0|
 
-         var pairs, curves;
+         var out, pairs, curves;
 
         // pairs [voltage, resistance] response
         pairs = [[0.0, 109.0], [1.0, 109.0], [1.9, 96.2], [2.0, 88.2],
@@ -72,8 +73,11 @@ Vactrol {
         // interpolation curves
         curves = [1 ,1, 1, -2, -1, -1, -1, -1, -1, -1, -1];
 
+        // half-wave rectify
+        out = Clip.ar(in, lo: 0, hi: 1);
+
         // scale input to 9v and impose response curve
-        ^IEnvGen.ar(Env.pairs(pairs, curves), in * 9.0)
+        ^IEnvGen.ar(Env.pairs(pairs, curves), out * 9.0)
     }
 
 
