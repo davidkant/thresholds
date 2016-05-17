@@ -31,11 +31,9 @@
  -> FEATURE: implement frequency dependent lag
  -> TUNING: measure the lag
  -> TUNING: measure some other vactrol responses
- ?? half-wave rectify LED
  ** would be nice to scope the intermediate signals
  ** still want to maintain photoR bounds
  ** still want to maintain ledV bounds
- ?? inverts signal?
  -> explain hysteresis in comments
  -> make envelope editalbe, a gui would be great
 
@@ -88,9 +86,23 @@ Vactrol {
     }
 
 
-    *hysteresis { |in = 0|
+    *hysteresis { |in = 0, time = 1, base = 2|
 
         // just pass through for now...
-        ^in
+        // ^in
+
+        var hysteresis, hysteresis_coef, exp_x;
+
+        // lag hysteresis
+        hysteresis = LagUD.ar(in, time, time);
+
+        // scale hysteresis value and invert to [-1,1]
+        exp_x = LinLin.ar(hysteresis, 2.56, 109.0, 1, -1);
+
+        // scale by exp function, base B
+        hysteresis_coef = base.pow(exp_x);
+
+        // apply to resistance (return hyst coef for monitor)
+        ^[in * hysteresis_coef, hysteresis_coef]
     }
 }
