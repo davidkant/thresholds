@@ -55,10 +55,49 @@ var scopeBus = Bus.audio(s, 2);
 y = { var sig, vactrol;
 
     // source signal
-    sig = Pulse.ar(258.7/1.5, width: 0.5, mul: 0.0666);
+    sig = Pulse.ar(258.7/1.5, width: 0.5, mul: 0.6);
 
-    // transformer
-    vactrol = Vactrol.ar(sig) / 120;
+    // vactrol + remove DC offset
+    vactrol = LeakDC.ar(Vactrol.ar(sig));
+
+    // audio monitor output
+    Out.ar(0, [vactrol, vactrol]);
+
+    // scope output
+    [sig, vactrol];
+
+}.play(outbus: scopeBus);
+
+// scope
+d = Stethoscope.new(s, numChannels: 2, index: scopeBus.index);
+d.size_(450);
+d.style_(1);
+d.yZoom_(1.0);
+d.xZoom_(1.0);
+d.scopeView.background_(Color.new(0.15, 0.15, 0.15));
+d.scopeView.waveColors_([Color.cyan, Color.magenta]);
+d.scopeView.fill_(true);
+d.view.alwaysOnTop_(true);
+d.view.onClose = {y.free;}.addFunc(d.view.onClose);
+)
+::
+
+variable attack and decay:
+code::
+(
+// scope busses
+var scopeBus = Bus.audio(s, 2);
+
+// synth
+y = { var sig, vactrol;
+
+    // source signal
+    sig = Pulse.ar(258.7/1.5, width: 0.5, mul: 0.6);
+
+    // vactrol + remove DC offset
+    vactrol = LeakDC.ar(Vactrol.ar(sig,
+        attack: MouseY.kr(0, 1),
+        decay: MouseX.kr(0, 2)));
 
     // audio monitor output
     Out.ar(0, [vactrol, vactrol]);
