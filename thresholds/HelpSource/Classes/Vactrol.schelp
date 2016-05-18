@@ -1,0 +1,83 @@
+title:: Vactrol
+summary:: Vactrol Optoisolator
+related:: Classes/Mixer741, Classes/PowerAmp386, Classes/LowPass741
+
+DESCRIPTION::
+
+Vactrol from David Dunn's "Thresholds and Fragile States" (2010)
+
+A vactrol, or optoisolator, converts voltage to resistance. It is used to allow
+signal feedback to modualate the variable resistance of the chaotic oscillator.
+
+Dunn's optoisolator is made of an LED RadioShack #276-0085 glued to a
+photoresistor. Incoming voltage signal drives the LED and the photoresistor
+responds by changing resistance.
+
+Features
+
+list::
+  ## half-wave rectify (diode)
+  ## voltage to resistance response measured from actual optoisolator
+  ## asymmetric attack / release lag times
+  ## hysteresis [NOT YET IMPLEMENTED]
+  ## freq dependent lag [NOT YET IMPLEMENTED]
+::
+
+Voltage-to-resistance curve is measured from actual components.
+
+from "Thresholds" library  -dkant, 2016
+
+
+CLASSMETHODS::
+private:: categories
+
+METHOD:: ar
+
+ARGUMENT:: in
+The input signal.
+
+ARGUMENT:: attack
+Attack time (in seconds).
+
+ARGUMENT:: decay
+Decay time (in seconds).
+
+
+EXAMPLES::
+
+vactrol square wave:
+code::
+(
+// scope busses
+var scopeBus = Bus.audio(s, 2);
+
+// synth
+y = { var sig, vactrol;
+
+    // source signal
+    sig = Pulse.ar(258.7/1.5, width: 0.5, mul: 0.0666);
+
+    // transformer
+    vactrol = Vactrol.ar(sig) / 120;
+
+    // audio monitor output
+    Out.ar(0, [vactrol, vactrol]);
+
+    // scope output
+    [sig, vactrol];
+
+}.play(outbus: scopeBus);
+
+// scope
+d = Stethoscope.new(s, numChannels: 2, index: scopeBus.index);
+d.size_(450);
+d.style_(1);
+d.yZoom_(1.0);
+d.xZoom_(1.0);
+d.scopeView.background_(Color.new(0.15, 0.15, 0.15));
+d.scopeView.waveColors_([Color.cyan, Color.magenta]);
+d.scopeView.fill_(true);
+d.view.alwaysOnTop_(true);
+d.view.onClose = {y.free;}.addFunc(d.view.onClose);
+)
+::
