@@ -42,6 +42,11 @@ Attack time (in seconds).
 ARGUMENT:: decay
 Decay time (in seconds).
 
+ARGUMENT:: hysteresis
+Hysteresis time lage (in seconds). This determines the exponent of an exponential function.
+
+ARGUMENT:: depth
+Hysteresis depth. This is the base coefficient of an exponential function.
 
 EXAMPLES::
 
