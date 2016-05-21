@@ -36,7 +36,6 @@
  ** still want to maintain ledV bounds
  -> explain hysteresis in comments
  -> make envelope editalbe, a gui would be great
- -> undocumented ar args
 
 */
 
@@ -58,6 +57,25 @@ Vactrol {
 
         // [4] out
         ^out.madd(mul: mul, add: add);
+	}
+
+
+    *monitor { |in = 0, attack = 0.030, decay = 2.0, hysteresis = 10, depth = 2,
+        mul = 1, add = 0|
+
+        var out, hyst;
+
+        // [1] voltage to resistance
+        out = this.v2r(in);
+
+        // [2] lag
+        out = this.lag(out, attack, decay);
+
+        // [3] hysteresis
+        hyst = this.hysteresis(out, time: hysteresis, base: depth);
+
+        // [4] out: pre-hysteresis, post-hysteresis, internal state
+        ^[out.madd(mul: mul, add: add), hyst[0], hyst[1]]
 	}
 
 
@@ -90,9 +108,6 @@ Vactrol {
 
     *hysteresis { |in = 0, time = 1, base = 2|
 
-        // just pass through for now...
-        // ^in
-
         var hysteresis, hysteresis_coef, exp_x;
 
         // lag hysteresis
@@ -104,7 +119,7 @@ Vactrol {
         // scale by exp function, base B
         hysteresis_coef = base.pow(exp_x);
 
-        // apply to resistance
-        ^(in * hysteresis_coef)
+        // apply to resistance (return exp_x for monitor)
+        ^[in * hysteresis_coef, exp_x]
     }
 }
