@@ -72,7 +72,7 @@ Vactrol {
         out = this.lag(out, attack, decay);
 
         // [3] hysteresis
-        hyst = this.hysteresis(out, time: hysteresis, base: depth);
+        hyst = this.hysteresisMonitor(out, time: hysteresis, base: depth);
 
         // [4] out: pre-hysteresis, post-hysteresis, internal state
         ^[out.madd(mul: mul, add: add), hyst[0], hyst[1]]
@@ -107,6 +107,23 @@ Vactrol {
 
 
     *hysteresis { |in = 0, time = 1, base = 2|
+
+        var hysteresis, hysteresis_coef, exp_x;
+
+        // lag hysteresis
+        hysteresis = LagUD.ar(in, time, time);
+
+        // scale hysteresis value and invert to [-1,1]
+        exp_x = LinLin.ar(hysteresis, 2.56, 109.0, 1, -1);
+
+        // scale by exp function, base B
+        hysteresis_coef = base.pow(exp_x);
+
+        // apply to resistanc
+        ^in * hysteresis_coef
+    }
+
+    *hysteresisMonitor { |in = 0, time = 1, base = 2|
 
         var hysteresis, hysteresis_coef, exp_x;
 
