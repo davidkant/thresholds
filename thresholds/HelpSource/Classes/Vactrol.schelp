@@ -125,3 +125,40 @@ d.view.alwaysOnTop_(true);
 d.view.onClose = {y.free;}.addFunc(d.view.onClose);
 )
 ::
+
+hysteresis monitor:
+code::
+(
+// scope busses
+var scopeBus = Bus.audio(s, 4);
+
+// synth
+y = { var sig, vactrol;
+
+    // source signal
+    sig = Pulse.ar(258.7/1.5, width: 0.5, mul: MouseY.kr(0,1));
+
+    // vactrol + hyesteresis monitor
+    vactrol = Vactrol.monitor(sig, hysteresis: 50);
+
+    // audio monitor output
+    Out.ar(0, [vactrol[0], vactrol[0]]);
+
+    // scope output
+    [sig, LeakDC.ar(vactrol[0]), LeakDC.ar(vactrol[1]), vactrol[2]];
+
+}.play(outbus: scopeBus);
+
+// scope
+d = Stethoscope.new(s, numChannels: 4, index: scopeBus.index);
+d.size_(450);
+d.style_(1);
+d.yZoom_(1.0);
+d.xZoom_(1.0);
+d.scopeView.background_(Color.new(0.15, 0.15, 0.15));
+d.scopeView.waveColors_([Color.cyan, Color.magenta, Color.yellow, Color.white]);
+d.scopeView.fill_(true);
+d.view.alwaysOnTop_(true);
+d.view.onClose = {y.free;}.addFunc(d.view.onClose);
+)
+::
