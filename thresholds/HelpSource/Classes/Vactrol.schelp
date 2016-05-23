@@ -19,11 +19,18 @@ list::
   ## half-wave rectify (diode)
   ## voltage to resistance response measured from actual optoisolator
   ## asymmetric attack / release lag times
-  ## hysteresis [NOT YET IMPLEMENTED]
+  ## hysteresis
   ## freq dependent lag [NOT YET IMPLEMENTED]
 ::
 
 Voltage-to-resistance curve is measured from actual components.
+
+SUBSECTION::Hysteresis
+Photoresistors exhibit a poperty of emphasis::hysteresis::, which means that the resistance
+of the photoresistor is determined not only by its current state but by past
+states as well. For instance, a photoresistor will have a greater resistance
+when coming from a light environment than when coming from a dark environment
+in response to the same illumination.
 
 from "Thresholds" library  -dkant, 2016
 
@@ -43,10 +50,10 @@ ARGUMENT:: decay
 Decay time (in seconds).
 
 ARGUMENT:: hysteresis
-Hysteresis time lage (in seconds). This determines the exponent of an exponential function.
+Hysteresis time lag (in seconds).
 
 ARGUMENT:: depth
-Hysteresis depth. This is the base coefficient of an exponential function.
+Hysteresis depth.
 
 EXAMPLES::
 

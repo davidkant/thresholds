@@ -14,10 +14,22 @@
    * half-wave rectify (diode)
    * voltage to resistance response measured from actual optoisolator
    * asymmetric attack / release lag times
-   - hysteresis [NOT YET IMPLEMENTED]
+   * hysteresis
    - freq dependent lag [NOT YET IMPLEMENTED]
 
  * voltage-to-resistance curve is measured from physical components
+
+ Photoresistors exhibit a poperty of hysteresis, which means that the resistance
+ of the photoresistor is determined not only by its current state but by past
+ states as well. For instance, a photoresistor will have a greater resistance
+ when coming from a light environment than when coming from a dark environment
+ in response to the same illumination.
+
+ Hysteresis is implemented by scaling the current internal state by a hysteresis
+ state. The hysteresis state is determined using a long lag to track and smooth
+ the internal state of the photoresistor. The hysteresis state is converted to a
+ bipolar range [-1,1] and scaled by an exponential function. This value is used
+ to scale the current photoresistor state.
 
  from "Thresholds" library  -dkant, 2016
 
@@ -27,15 +39,14 @@
  - signal is essentially inverted b/c hi voltage -> hi illum -> low resistance
 
  TODO
- -> FEATURE implement hysteresis
+ -> TUNING: measure hysteresis depth
  -> FEATURE: implement frequency dependent lag
  -> TUNING: measure the lag
  -> TUNING: measure some other vactrol responses
  ** would be nice to scope the intermediate signals
  ** still want to maintain photoR bounds
  ** still want to maintain ledV bounds
- -> explain hysteresis in comments
- -> make envelope editalbe, a gui would be great
+ -> make envelope editable, a gui would be great
 
 */
 
