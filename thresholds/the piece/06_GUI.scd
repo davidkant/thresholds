@@ -2,6 +2,10 @@
 
  A suite of GUIs for dealin with this unruly beast.
 
+ * do i want all scopes to have same xZoom?
+ * some consistent formatting like and padding border?
+ * this synth index stuff ...
+
 */
 
 
@@ -83,7 +87,7 @@
 */
 
 (
-~octoscope = {|model|
+~octoScope = {|model|
 
     var myOctoscope = ();
 
@@ -112,7 +116,7 @@
         // oscilloscope
         channel.scopeView = CompositeView(channel.container, Rect(0, 0, channel.container.bounds.width, 85));
         channel.scope = Stethoscope.new(bus.server, 1, bus.index, view: channel.scopeView, zoom: 2);
-        channel.scope.view.bounds_(Rect(0, -28, channel.container.bounds.width+19, 90+47));
+        channel.scope.view.bounds_(Rect(0, -28, channel.container.bounds.width+19, 85+47));
         channel.scope.scopeView.waveColors_([Color.cyan]);
         channel.scope.scopeView.fill_(true);
 
@@ -122,13 +126,13 @@
         channel.rSlider.action_({|slider| if (channel.msynth.notNil) {model.setSynth(channel.msynth, (\koscR ++ channel.aorb).asSymbol, (\koscR ++ channel.aorb).asSymbol.asSpec.map(slider.value))}});
 
         // kosc r numbox
-        channel.rNumber = NumberBox(channel.container, Rect(55, 95+12, 50, 20)).value_(1.0);
-        channel.rNumber.decimals_(3);
-        channel.rNumber.font_(Font.default.size_(12));
-        channel.rNumber.font_(Font.default.size_(12));
-        channel.rNumber.align_(\right);
-        channel.rNumber.background_(Color.clear);
-        channel.rNumber.action_({|number| if (channel.msynth.notNil) {model.setSynth(channel.msynth, (\koscR ++ channel.aorb).asSymbol, number.value)}});
+        channel.rNumber = NumberBox(channel.container, Rect(55, 95+12, 50, 20))
+        .value_(1.0)
+        .decimals_(3)
+        .font_(Font.default.size_(12))
+        .align_(\right)
+        .background_(Color.clear)
+        .action_({|number| if (channel.msynth.notNil) {model.setSynth(channel.msynth, (\koscR ++ channel.aorb).asSymbol, number.value)}});
 
         // preamp slider
         channel.preAmpSlider = Knob(channel.container, Rect(0, 95+50, 45, 45));
@@ -136,12 +140,13 @@
         channel.preAmpSlider.action_({|slider| if (channel.msynth.notNil) {model.setSynth(channel.msynth, (\preAmpPot ++ channel.aorb).asSymbol, (\preAmpPot ++ channel.aorb).asSymbol.asSpec.map(slider.value))}});
 
         // preamp numbox
-        channel.preAmpNumber = NumberBox(channel.container, Rect(55, 95+50+12, 50, 20)).value_(1.0);
-        channel.preAmpNumber.decimals_(3);
-        channel.preAmpNumber.font_(Font.default.size_(12));
-        channel.preAmpNumber.align_(\right);
-        channel.preAmpNumber.background_(Color.clear);
-        channel.preAmpNumber.action_({|number| if (channel.msynth.notNil) {model.setSynth(channel.msynth, (\preAmpPot ++ channel.aorb).asSymbol, number.value)}});
+        channel.preAmpNumber = NumberBox(channel.container, Rect(55, 95+50+12, 50, 20))
+        .value_(1.0)
+        .decimals_(3)
+        .font_(Font.default.size_(12))
+        .align_(\right)
+        .background_(Color.clear)
+        .action_({|number| if (channel.msynth.notNil) {model.setSynth(channel.msynth, (\preAmpPot ++ channel.aorb).asSymbol, number.value)}});
 
         // highlighters
         channel.highlighters = 3.collect({ |j|
@@ -152,17 +157,17 @@
 
         // init koscR
         if (channel.msynth.notNil) {
-            channel.msynth.get((\koscR ++ channel.aorb).asSymbol, { |val| {
-                channel.rSlider.value_((\koscR ++ channel.aorb).asSymbol.asSpec.unmap(val));
-                channel.rNumber.value_(val);
+            channel.msynth.get((\koscR ++ channel.aorb).asSymbol, { |value| {
+                channel.rSlider.value_((\koscR ++ channel.aorb).asSymbol.asSpec.unmap(value));
+                channel.rNumber.value_(value);
             }.defer });
         };
 
         // init preAmp
         if (channel.msynth.notNil) {
-            channel.msynth.get((\preAmpPot ++ channel.aorb).asSymbol, { |val| {
-                channel.preAmpSlider.value_((\preAmpPot ++ channel.aorb).asSymbol.asSpec.unmap(val));
-                channel.preAmpNumber.value_(val)
+            channel.msynth.get((\preAmpPot ++ channel.aorb).asSymbol, { |value| {
+                channel.preAmpSlider.value_((\preAmpPot ++ channel.aorb).asSymbol.asSpec.unmap(value));
+                channel.preAmpNumber.value_(value)
             }.defer });
         };
 
@@ -238,5 +243,123 @@
 
     // return osctoscope
     myOctoscope
+
+});
+
+/* ~lowpass --------------------------------------------------------------------
+
+ Lowpass Filters
+
+ todo:
+
+*/
+(
+~lowPassScope = {|model|
+
+    var self = ();
+
+    // settings
+    self.channelWidth = 100;
+    self.knobSize = 50;
+
+    // window
+    self.win = Window.new('LowPass', Rect(100,500,425,138)).front.alwaysOnTop_(true);
+
+    // init channels 1 for each synth
+    self.channels = model.synths.collect({()});
+
+    // helpers
+    self.numToFreqString = {|val| (1 / (2 * pi * (8e3 * (1 - val) * 100e3 * 0.1e-6 * 0.1e-6).sqrt)).asStringPrec(4) ++ ' Hz'};
+
+    // create channels
+    model.synths.do({|synth, i|
+
+        // local reference
+        var channel = self.channels[i];
+
+        // synth
+        channel.msynth = synth;
+
+        // channel container
+        channel.container = CompositeView(self.win, Rect(i*100+12, 10, 99, 200));
+
+        // lowPassPot knob
+        channel.lowPassPotKnob = Knob(channel.container, Rect(0, 0, self.knobSize, self.knobSize));
+        channel.lowPassPotKnob.color_(channel.lowPassPotKnob.color.put(1, Color.grey));
+        channel.lowPassPotKnob.action_({|knob| if (channel.msynth.notNil) {model.setSynth(channel.msynth, \lowPassPot, \lowPassPot.asSpec.map(knob.value))}});
+
+        // lowPassPot numberBox
+        channel.lowPassPotNumber = NumberBox(channel.container, Rect(channel.container.bounds.width - 45, 2, 40, 20))
+        .value_(1.0)
+        .decimals_(3)
+        .font_(Font.default.size_(12))
+        .align_(\right)
+        .background_(Color.clear)
+        .action_({|number| if (channel.msynth.notNil) {model.setSynth(channel.msynth, \lowPassPot, number.value)}});
+
+        // lowPassPot freq display text
+        channel.lowPassPotFreqText = StaticText(channel.container, Rect(channel.container.bounds.width - 64, 33, 58, 20))
+        .string_(self['numToFreqString'].value(0))
+        .font_(Font.default.size_(9))
+        .align_(\right)
+        .background_(Color.clear)
+        .action_({|number| if (channel.msynth.notNil) {model.setSynth(channel.msynth, \lowPassPot, number.value)}});
+
+        // oscilloscope
+        channel.scopeView = CompositeView(channel.container, Rect(0, self.knobSize+10, channel.container.bounds.width, 57));
+        channel.scope = Stethoscope.new(model.scopeBusses[i].server, 2, model.scopeBusses[i].index, view: channel.scopeView, zoom: 1);
+        channel.scope.style_(1);
+        channel.scope.view.bounds_(Rect(0, -28, channel.container.bounds.width+19, 57+47));
+        channel.scope.scopeView.waveColors_([Color.magenta, Color.cyan]);
+        channel.scope.scopeView.fill_(true);
+
+        // init lowPassPot
+        if (channel.msynth.notNil) {
+            channel.msynth.get(\lowPassPot, { |value| {
+                channel.lowPassPotKnob.value_(\lowPassPot.asSpec.unmap(value));
+                channel.lowPassPotNumber.value_(value);
+                channel.lowPassPotFreqText.string_(self['numToFreqString'].value(value));
+            }.defer });
+        };
+
+    });
+
+    // updater
+    self.updater = { arg model, whatChanged ... args;
+
+        if (whatChanged == \setSynth) {
+
+            var synthIndex, param, value, channel;
+
+            // unpack args
+            synthIndex = args[0]; param = args[1]; value = args[2];
+
+            // update GUI
+            if (param == \lowPassPot, {
+
+                // which channel
+                channel = self.channels[synthIndex];
+
+                // update knob
+                channel.lowPassPotKnob.value_(\lowPassPot.asSpec.unmap(value));
+
+                // update numberBox
+                channel.lowPassPotNumber.value_(value);
+
+                // update freq text
+                channel.lowPassPotFreqText.string_(self['numToFreqString'].value(value));
+
+            });
+        };
+    };
+
+    // add octoscope updater function to model dependant list
+    model.addDependant(self['updater']);
+
+    // remove updater function on window close
+    self.win.onClose_({model.removeDependant(self['updater'])});
+
+    // return self
+    self
 
 });
