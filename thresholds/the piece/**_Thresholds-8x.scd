@@ -22,8 +22,8 @@
 (~dir ++ "05_Model.scd").load;               // MVC Model Setup
 (~dir ++ "06_GUI.scd").load;                 // Load GUIs
 (~dir ++ "07_MidiControl.scd").load;         // Some Midi Control
-(~dir ++ "08_PostProcessing-8x2.scd").load;  // KOSC -> DAC via RingMods
-(~dir ++ "09_Walkers.scd").load;             // White Walkers --- oh my!
+(~dir ++ "09_PostProcessing-8x2.scd").load;  // KOSC -> DAC via RingMods
+(~dir ++ "99_Walkers.scd").load;             // White Walkers --- oh my!
 
 // guis ------------------------------------------------------------------------
 
@@ -32,7 +32,9 @@
 ~quick3 = ~quickGUI.value(~a2b2,z,"A2B2");
 ~quick4 = ~quickGUI.value(~c2d2,z,"C2D2");
 
-~octo = ~octoscope.value(~model);
+~octo = ~octoScope.value(~model);
+
+~lp = ~lowPassScope.value(~model);
 
 // free ------------------------------------------------------------------------
 

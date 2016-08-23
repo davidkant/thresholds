@@ -8,6 +8,9 @@
   * Y SCALE FIX
   * SCOPE RATIO SCALE and toggle AC plot
 
+  ? are all the reassigments inefficient?
+  ? should scopes happen as they go?
+
 */
 
 // control spec
@@ -66,12 +69,12 @@ z = SynthDef(\feedbackPair, {
 
     // busses
     arg mainOutBusA, mainOutBusB, componentOutBusA, componentOutBusB,
-    rNetInBusA, rNetOutBusA, rNetInBusB, rNetOutBusB, scopeBusA, scopeBusB,
+    rNetInBusA, rNetOutBusA, rNetInBusB, rNetOutBusB, scopeBus, scopeBusA, scopeBusB,
 
     otherIn,
 
     // kosc
-    koscRA = 18.6, koscRB = 18.6, koscFreq = 0.85, koscError = 2.0,
+    koscRA = 18.6, koscRB = 18.6, koscFreq = 0.85, koscError = 10.0,
     lowPassPot = 0.85,
 
     // feedback path
@@ -176,6 +179,9 @@ z = SynthDef(\feedbackPair, {
     // [*] component out
     Out.ar(componentOutBusA, LeakDC.ar(koscA * [1, 0.8, 1]));  // SCOPE RATIO SCALE and toggle AC plot
     Out.ar(componentOutBusB, LeakDC.ar(koscB * [1, 0.8, 1]));  // SCOPE RATIO SCALE and toggle AC plot
+
+    // [*] scope outputs
+    Out.ar(scopeBus, [sigMixedIn, sigLP]);
 
     // [*] scope outputs
     // Out.ar(scopeBusA, [lfoSigA, sigMixedIn, sigLP, sigMix2A, sigPreAmpA, sigPowAmpA, sigTformA/10, sigVtrolA[0]/109, sigVtrolA[1], sigVtrolA[2], koscA[0], koscA[1], koscA[2]]);
