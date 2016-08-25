@@ -35,6 +35,7 @@
 ~componentOutB2 = Bus.audio(s, 3);
 ~componentOutC2 = Bus.audio(s, 3);
 ~componentOutD2 = Bus.audio(s, 3);
+~componentOutBusses = [~componentOutA1, ~componentOutB1, ~componentOutC1, ~componentOutD1, ~componentOutA2, ~componentOutB2, ~componentOutC2, ~componentOutD2];
 
 // scope busses
 ~scopeBusA1B1 = Bus.audio(s, 2);

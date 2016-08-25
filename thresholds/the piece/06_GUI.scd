@@ -83,6 +83,7 @@
  -> init direct from synth now but should be through model
  ??? ref to self in updater
  -> would be nice otknow it was knob so dont set again but whatevr
+ -> scope in scopeview needs -2/+2 left right
 
 */
 
@@ -251,6 +252,7 @@
  Lowpass Filters
 
  todo:
+ -> scope in scopeview needs -2/+2 left right
 
 */
 (
@@ -358,6 +360,72 @@
 
     // remove updater function on window close
     self.win.onClose_({model.removeDependant(self['updater'])});
+
+    // return self
+    self
+
+});
+
+/* ~attractors -----------------------------------------------------------------
+
+ todo
+ -> resize
+ -> sliders for x,y zoom
+ -> overlay a pair diff colors?
+ -> overlay waveforms? or even below X,Y
+
+*/
+
+(
+~attractors = {|model|
+
+    var self = ();
+
+    // settings
+    self.scopeSize = 120;
+    self.paddingFromEdge = 10;
+    self.paddingCeneterColumn = 5;
+    self.paddingWithinPair = 2;
+
+    // window
+    self.win = Window.new('Attractors', Rect(
+        100,
+        500,
+        self.scopeSize*4+self.paddingFromEdge+self.paddingFromEdge+self.paddingCeneterColumn,
+        self.scopeSize*2+self.paddingFromEdge+self.paddingFromEdge+self.paddingCeneterColumn)
+    ).front.alwaysOnTop_(true);
+
+    // init channels 1 for each osc
+    self.channels = model.componentOutBusses.collect({()});
+
+    // create channels
+    model.componentOutBusses.do({|bus, i|
+
+        // local reference
+        var channel = self.channels[i];
+
+        // channel container
+        channel.container = CompositeView(self.win, Rect(0,0,100,100));
+
+        // channel container
+        channel.container = CompositeView(self.win, Rect(
+            (i%2)*(self.scopeSize+self.paddingWithinPair) + ((i/4).asInteger*(self.scopeSize*2+self.paddingCeneterColumn)) + self.paddingFromEdge,
+            (i/2).asInteger%2*(self.scopeSize+self.paddingCeneterColumn) + self.paddingFromEdge,
+            self.scopeSize,
+            self.scopeSize));
+
+        // oscilloscope
+        channel.scopeView = CompositeView(channel.container, Rect(0,0,channel.container.bounds.width, channel.container.bounds.height));
+        channel.scope = Stethoscope.new(bus.server, 2, bus.index, view: channel.scopeView, zoom: 10);
+        channel.scope.yZoom_(2);
+        channel.scope.style_(2);
+        channel.scope.view.bounds_(Rect(-2, -28, channel.container.bounds.width+21, channel.container.bounds.height+47));
+        channel.scope.scopeView.waveColors_([Color.magenta]);
+        // channel.scope.scopeView.waveColors_([[Color.cyan], [Color.magenta]][((i/2).asInteger%2).postln]);
+        //channel.scope.scopeView.background_(Color.clear);
+        channel.scope.scopeView.fill_(true);
+
+    });
 
     // return self
     self
