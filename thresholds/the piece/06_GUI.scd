@@ -449,15 +449,13 @@
  and led-like monitor when they are firing
 
  todo
- -> un-hardwire from 8 to number of lfo busses and the number of ACTIVE synths when that's rolling
-
- refactor launch routine added to appclock and removed on close that checks 60hz for changes and changes blinker state when there is a chang
- -> sometimes refresh misses a lflash duty cycle
- -> on redraw if not eual to current
- -> what is best way to add things to app clock and keep track of them so not clear all?
- -> best way to detect control bus triggers via appclock thread so can just turn on / off when need to?
-
- snag:: computes from formula here, even if used static method of LFO still wouldn't correspond to instance variable changes
+ -> bug: sometimes blinker misses a flash or flashes twice
+    * fixed: monitoring on pre-LP b/c lowpass values caused some trouble
+ -> bug: blinker faster than ~ 4hz undersampling blinker rendering... really just want all on it's b/c the impulse duty cycle is too narrow
+ -> refactor: un-hardwire from 8 to number of lfo busses and the number of ACTIVE synths when that's rolling
+ -> question: gui animation best practice? i'm launching an appclock thread to driver the window drawFun
+ -> question: best way to detect control bus triggers via appclock thread?
+ -> snag:: computes from formula here, even if used static method of LFO still wouldn't correspond to instance variable changes
 
 */
 (
@@ -501,6 +499,7 @@
 
         // a few local copies
         channel.lfoCapSwitch = 0;
+        channel.blinkerValue = 0;
 
         // channel container
         channel.container = CompositeView(self.win, Rect(i*115+10,60,115,100));
@@ -536,7 +535,7 @@
         // blinker
         channel.blinker = CompositeView(channel.container, Rect(self.lfoPotKnobSize+4+(self.lfoLowPassPotSize/2)-(self.blinkerSize/2), 10, self.blinkerSize, self.blinkerSize));
 
-        // init lfoCapSwitch (first b/c lfoPotText depends on it)
+        // init lfoCapSwitch (init first b/c lfoPotText depends on it)
         if (channel.msynth.notNil) {
             channel.msynth.get((\lfoCapSwitch ++ channel.aorb).asSymbol, { |value| {
                 channel.lfoCapSwitchCheckBox.value_(value);
@@ -562,13 +561,23 @@
 
     });
 
-    // draw
+    // draw (update blinker)
     self.win.drawFunc_({
-        model.lfoScopeBusses.get({|vals|
-            vals.do({|val,i|
+
+        // check current lfo bus val against internal val
+        model.lfoScopeBusses.get({|vals| vals.do({|val,i|
+
+            // if different redraw that channel
+            if (val != self.channels[i].blinkerValue, {
+
+                // redraw
                 {self.channels[i].blinker.background_([Color.red, Color.grey(0.65)][1-val])}.defer;
+
+                // update internal val
+                self.channels[i].blinkerValue = val;
             });
-        });
+
+        })});
     });
 
     // updater
@@ -615,14 +624,11 @@
     // add updater function to model dependant list
     model.addDependant(self['updater']);
 
-    // add to appclock
-    AppClock.sched(0.0, {|time|
-        self.win.drawFunc.value();
-        0.05;
-    });
+    // fork drawFunc routine @60Hz on AppClock
+    self.drawRoutine = {loop{self.win.drawFunc.value(); 0.016666666666667.yield;}}.fork(AppClock);
 
-    // remove this and updater function and from appclock on window close
-    self.win.onClose_({model.removeDependant(self['updater']); AppClock.clear});
+    // remove drawRoutine and updater function on window close
+    self.win.onClose_({model.removeDependant(self['updater']); self.drawRoutine.stop});
 
     // return self
     self
