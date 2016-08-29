@@ -69,7 +69,7 @@ z = SynthDef(\feedbackPair, {
 
     // busses
     arg mainOutBusA, mainOutBusB, componentOutBusA, componentOutBusB,
-    rNetInBusA, rNetOutBusA, rNetInBusB, rNetOutBusB, scopeBus, scopeBusA, scopeBusB,
+    rNetInBusA, rNetOutBusA, rNetInBusB, rNetOutBusB, scopeBus, lfoScopeBusA, lfoScopeBusB,
 
     otherIn,
 
@@ -123,15 +123,15 @@ z = SynthDef(\feedbackPair, {
     sigLP = LowPass741.ar(sigMixedIn, (1-lowPassPot)); //.scope(name:"lowpass");
 
     // [2] lfo
-    lfoSigA = LFOsc555Impulse.ar(lfoPotA, cswitch: lfoCapSwitchA) * lfoGateA;
+    lfoSigA = LFOsc555Impulse.ar(lfoPotA, cswitch: lfoCapSwitchA);
     lfoSigLPA = LowPass741.ar(lfoSigA, (1-lfoLowPassPotA));
 
-    lfoSigB = LFOsc555Impulse.ar(lfoPotB, cswitch: lfoCapSwitchB) * lfoGateB;
+    lfoSigB = LFOsc555Impulse.ar(lfoPotB, cswitch: lfoCapSwitchB);
     lfoSigLPB = LowPass741.ar(lfoSigB, (1-lfoLowPassPotB));
 
     // [3] mixer
-    sigMix2A = Mixer741.ar([sigLP, lfoSigA]); //.scope(name:"mixer");
-    sigMix2B = Mixer741.ar([sigLP, lfoSigB]); //.scope(name:"mixer");
+    sigMix2A = Mixer741.ar([sigLP * lfoGateA, lfoSigA]); //.scope(name:"mixer");
+    sigMix2B = Mixer741.ar([sigLP * lfoGateB, lfoSigB]); //.scope(name:"mixer");
 
     // [4] preamp
     Out.ar(rNetOutBusA, [sigMix2A, K2A.ar(preAmpPotA)]);
@@ -184,6 +184,8 @@ z = SynthDef(\feedbackPair, {
     Out.ar(scopeBus, [sigMixedIn, sigLP]);
 
     // [*] scope outputs
+    Out.kr(lfoScopeBusA, [lfoSigA]);
+    Out.kr(lfoScopeBusB, [lfoSigB]);
     // Out.ar(scopeBusA, [lfoSigA, sigMixedIn, sigLP, sigMix2A, sigPreAmpA, sigPowAmpA, sigTformA/10, sigVtrolA[0]/109, sigVtrolA[1], sigVtrolA[2], koscA[0], koscA[1], koscA[2]]);
     // Out.ar(scopeBusB, [lfoSigB, sigMixedIn, sigLP, sigMix2B, sigPreAmpB, sigPowAmpB, sigTformB/10, sigVtrolB[0]/109, sigVtrolB[1], sigVtrolB[2], koscB[0], koscB[1], koscB[2]]);
 

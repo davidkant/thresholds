@@ -33,8 +33,10 @@
 ~quick4 = ~quickGUI.value(~c2d2,z,"C2D2");
 
 ~octo = ~octoScope.value(~model);
-
 ~lp = ~lowPassScope.value(~model);
+~atr1 = ~attractors.value(~model, style:1);
+~atr2 = ~attractors.value(~model, style:2);
+~lf = ~lfoscope.value(~model);
 
 // free ------------------------------------------------------------------------
 

@@ -44,6 +44,8 @@
 ~scopeBusC2D2 = Bus.audio(s, 2);
 ~scopeBusses = [~scopeBusA1B1, ~scopeBusC1D1, ~scopeBusA2B2, ~scopeBusC2D2];
 
+~lfoScopeBusses = Bus.control(s, 8);
+
 // patching bussses [signal, resistance]
 ~patchrNetA1toC1 = Bus.audio(s, 2);
 ~patchrNetC1toA1 = Bus.audio(s, 2);
