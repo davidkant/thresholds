@@ -97,6 +97,7 @@
 
     // window
     myOctoscope.win = Window.new('Octoscope', Rect(100,500,1225,210)).front.alwaysOnTop_(true);
+    myOctoscope.win.background_(Color.black);
 
     // init channels
     myOctoscope.channels = 8.collect({()});
@@ -118,7 +119,8 @@
         channel.scopeView = CompositeView(channel.container, Rect(0, 0, channel.container.bounds.width, 85));
         channel.scope = Stethoscope.new(bus.server, 1, bus.index, view: channel.scopeView, zoom: 2);
         channel.scope.view.bounds_(Rect(0, -28, channel.container.bounds.width+19, 85+47));
-        channel.scope.scopeView.waveColors_([Color.cyan]);
+        channel.scope.scopeView.waveColors_([Color.red]);
+        channel.scope.scopeView.background_(Color.white);
         channel.scope.scopeView.fill_(true);
 
         // kosc r slider
@@ -131,6 +133,7 @@
         .value_(1.0)
         .decimals_(3)
         .font_(Font.default.size_(12))
+        .normalColor_(Color.white)
         .align_(\right)
         .background_(Color.clear)
         .action_({|number| if (channel.msynth.notNil) {model.setSynth(channel.msynth, (\koscR ++ channel.aorb).asSymbol, number.value)}});
@@ -145,6 +148,7 @@
         .value_(1.0)
         .decimals_(3)
         .font_(Font.default.size_(12))
+        .normalColor_(Color.white)
         .align_(\right)
         .background_(Color.clear)
         .action_({|number| if (channel.msynth.notNil) {model.setSynth(channel.msynth, (\preAmpPot ++ channel.aorb).asSymbol, number.value)}});
@@ -355,7 +359,7 @@
         };
     };
 
-    // add octoscope updater function to model dependant list
+    // add updater function to model dependant list
     model.addDependant(self['updater']);
 
     // remove updater function on window close
@@ -377,15 +381,15 @@
 */
 
 (
-~attractors = {|model|
+~attractors = {|model, style=2|
 
     var self = ();
 
-    // settings
+    // formatting
     self.scopeSize = 120;
     self.paddingFromEdge = 10;
-    self.paddingCeneterColumn = 5;
-    self.paddingWithinPair = 2;
+    self.paddingCeneterColumn = 8;
+    self.paddingWithinPair = 1;
 
     // window
     self.win = Window.new('Attractors', Rect(
@@ -394,6 +398,8 @@
         self.scopeSize*4+self.paddingFromEdge+self.paddingFromEdge+self.paddingCeneterColumn,
         self.scopeSize*2+self.paddingFromEdge+self.paddingFromEdge+self.paddingCeneterColumn)
     ).front.alwaysOnTop_(true);
+
+    // self.win.background_(Color.black);
 
     // init channels 1 for each osc
     self.channels = model.componentOutBusses.collect({()});
@@ -409,7 +415,7 @@
 
         // channel container
         channel.container = CompositeView(self.win, Rect(
-            (i%2)*(self.scopeSize+self.paddingWithinPair) + ((i/4).asInteger*(self.scopeSize*2+self.paddingCeneterColumn)) + self.paddingFromEdge,
+            (i%2)*(self.scopeSize+self.paddingWithinPair) + ((i/4).asInteger*(self.scopeSize*2+self.paddingCeneterColumn+self.paddingWithinPair)) + self.paddingFromEdge,
             (i/2).asInteger%2*(self.scopeSize+self.paddingCeneterColumn) + self.paddingFromEdge,
             self.scopeSize,
             self.scopeSize));
@@ -418,14 +424,205 @@
         channel.scopeView = CompositeView(channel.container, Rect(0,0,channel.container.bounds.width, channel.container.bounds.height));
         channel.scope = Stethoscope.new(bus.server, 2, bus.index, view: channel.scopeView, zoom: 10);
         channel.scope.yZoom_(2);
-        channel.scope.style_(2);
-        channel.scope.view.bounds_(Rect(-2, -28, channel.container.bounds.width+21, channel.container.bounds.height+47));
-        channel.scope.scopeView.waveColors_([Color.magenta]);
-        // channel.scope.scopeView.waveColors_([[Color.cyan], [Color.magenta]][((i/2).asInteger%2).postln]);
-        //channel.scope.scopeView.background_(Color.clear);
+        channel.scope.style_(style);
+        channel.scope.view.bounds_(Rect(-2, -28, channel.scopeView.bounds.width+21, channel.scopeView.bounds.height+47));
+        channel.scope.scopeView.waveColors_([Color.magenta, Color.white]);
+        channel.scope.scopeView.background_(Color.magenta(0.1, 1));
         channel.scope.scopeView.fill_(true);
 
     });
+
+    // return self
+    self
+
+});
+
+/* ~lfo ------------------------------------------------------------------------
+
+ controls:
+
+   * lfoPotA, lfoPotB
+   * lfoCapSwitchA, lfoCapSwitchB
+   * lfoLowPassPotA, lfoLowPassPotB
+   * lfoCoupling
+
+ and led-like monitor when they are firing
+
+ todo
+ -> un-hardwire from 8 to number of lfo busses and the number of ACTIVE synths when that's rolling
+
+ refactor launch routine added to appclock and removed on close that checks 60hz for changes and changes blinker state when there is a chang
+ -> sometimes refresh misses a lflash duty cycle
+ -> on redraw if not eual to current
+ -> what is best way to add things to app clock and keep track of them so not clear all?
+ -> best way to detect control bus triggers via appclock thread so can just turn on / off when need to?
+
+ snag:: computes from formula here, even if used static method of LFO still wouldn't correspond to instance variable changes
+
+*/
+(
+~lfoscope = {|model|
+
+    var self = ();
+
+    // formatting
+    self.lfoPotKnobSize = 60;
+    self.lfoLowPassPotSize = 30;
+    self.blinkerSize = 10;
+
+    // window
+    self.win = Window.new('LFOs', Rect(100, 500, 926, 150))
+    .front.alwaysOnTop_(true)
+    .background_(Color.black);
+
+    // init channels 1 for each channel
+    self.channels = 8.collect({()});
+
+    // helpers
+    self.normToLfoFreqString = {|val, c|
+
+        var freq = 1.44 / ( (1e3 + (2 * val * 1e6) ) * (if (c.asBoolean.not, {10.0e-6}, {0.22e-6})));
+
+        if (freq > 1.0, {freq.asStringPrec(2) ++ ' Hz'}, {(1.0/freq).asStringPrec(4) ++ ' s'});
+
+        };
+
+    self.normToLowPassFreqString = {|val| (1 / (2 * pi * (8e3 * (1 - val) * 100e3 * 0.1e-6 * 0.1e-6).sqrt)).asStringPrec(3) ++ ' Hz'};
+
+    // create channels
+    8.do({|i|
+
+        // local reference
+        var channel = self.channels[i];
+
+        // synth and which of pair
+        channel.msynth = model.synths[i.div(2)];
+        channel.aorb = [\A,\B][i%2];
+
+        // a few local copies
+        channel.lfoCapSwitch = 0;
+
+        // channel container
+        channel.container = CompositeView(self.win, Rect(i*115+10,60,115,100));
+
+        // lfoPot knob
+        channel.lfoPotKnob = Knob(channel.container, Rect(0, 0, self.lfoPotKnobSize, self.lfoPotKnobSize));
+        channel.lfoPotKnob.color_(channel.lfoPotKnob.color.put(1, Color.grey))
+        .action_({|knob| if (channel.msynth.notNil) {model.setSynth(channel.msynth, (\lfoPot ++ channel.aorb).asSymbol, (\lfoPot ++ channel.aorb).asSymbol.asSymbol.asSpec.map(knob.value))}});
+
+        // lfoPot text
+        channel.lfoPotText = StaticText(channel.container, Rect(self.lfoPotKnobSize/2-25, self.lfoPotKnobSize+4, 50, 20))
+        .font_(Font.default.size_(11))
+        .stringColor_(Color.grey(0.6))
+        .align_(\center)
+        .background_(Color.clear);
+
+        // lfoLowPassPot knob
+        channel.lfoLowPassPotKnob = Knob(channel.container, Rect(self.lfoPotKnobSize+4, self.lfoPotKnobSize-self.lfoLowPassPotSize, self.lfoLowPassPotSize, self.lfoLowPassPotSize));
+        channel.lfoLowPassPotKnob.color_(channel.lfoLowPassPotKnob.color.put(1, Color.grey))
+        .action_({|knob| if (channel.msynth.notNil) {model.setSynth(channel.msynth, (\lfoLowPassPot ++ channel.aorb).asSymbol, (\lfoLowPassPot ++ channel.aorb).asSymbol.asSpec.map(knob.value))}});
+
+        // lfoLowPassPot text
+        channel.lfoLowPassPotText = StaticText(channel.container, Rect(self.lfoPotKnobSize+4+(self.lfoLowPassPotSize/2)-(50/2)+2, self.lfoPotKnobSize+0, 50, 20))
+        .font_(Font.default.size_(8))
+        .stringColor_(Color.grey(0.6))
+        .align_(\center)
+        .background_(Color.clear);
+
+        //lfoCapSwitch checkbox
+        channel.lfoCapSwitchCheckBox = CheckBox(self.win, Rect(50*i + (self.win.bounds.width/4)+50, 10, 25, 25))
+        .action_({|checkbox| if (channel.msynth.notNil) {model.setSynth(channel.msynth, (\lfoCapSwitch ++ channel.aorb).asSymbol, checkbox.value)}});
+
+        // blinker
+        channel.blinker = CompositeView(channel.container, Rect(self.lfoPotKnobSize+4+(self.lfoLowPassPotSize/2)-(self.blinkerSize/2), 10, self.blinkerSize, self.blinkerSize));
+
+        // init lfoCapSwitch (first b/c lfoPotText depends on it)
+        if (channel.msynth.notNil) {
+            channel.msynth.get((\lfoCapSwitch ++ channel.aorb).asSymbol, { |value| {
+                channel.lfoCapSwitchCheckBox.value_(value);
+                channel.lfoCapSwitch = value;
+            }.defer });
+        };
+
+        // init lfoPot
+        if (channel.msynth.notNil) {
+            channel.msynth.get((\lfoPot ++ channel.aorb).asSymbol, { |value| {
+                channel.lfoPotKnob.value_((\lfoPot ++ channel.aorb).asSymbol.asSpec.unmap(value));
+                channel.lfoPotText.string_(self['normToLfoFreqString'].value((\lfoPot ++ channel.aorb).asSymbol.asSpec.unmap(value), channel.lfoCapSwitch));
+            }.defer });
+        };
+
+        // init lfoLowPassPot
+        if (channel.msynth.notNil) {
+            channel.msynth.get((\lfoLowPassPot ++ channel.aorb).asSymbol, { |value| {
+                channel.lfoLowPassPotKnob.value_((\lfoLowPassPot ++ channel.aorb).asSymbol.asSpec.unmap(value));
+                channel.lfoLowPassPotText.string_(self['normToLowPassFreqString'].value((\lfoLowPassPot ++ channel.aorb).asSymbol.asSpec.unmap(value)));
+            }.defer });
+        };
+
+    });
+
+    // draw
+    self.win.drawFunc_({
+        model.lfoScopeBusses.get({|vals|
+            vals.do({|val,i|
+                {self.channels[i].blinker.background_([Color.red, Color.grey(0.65)][1-val])}.defer;
+            });
+        });
+    });
+
+    // updater
+    self.updater = { arg model, whatChanged ... args;
+
+        if (whatChanged == \setSynth) {
+
+            var synthIndex, param, value, channel;
+
+            // unpack args
+            synthIndex = args[0]; param = args[1]; value = args[2];
+
+            // update GUI
+            if (param == \lfoPotA) {
+                channel = self.channels[synthIndex*2 + 0];
+                channel.lfoPotKnob.value_(\lfoPotA.asSpec.unmap(value));
+                channel.lfoPotText.string_(self['normToLfoFreqString'].value(\lfoPotA.asSpec.unmap(value), channel.lfoCapSwitch));
+            }{ if (param == \lfoPotB) {
+                channel = self.channels[synthIndex*2 + 1];
+                channel.lfoPotKnob.value_(\lfoPotB.asSpec.unmap(value));
+                channel.lfoPotText.string_(self['normToLfoFreqString'].value(\lfoPotB.asSpec.unmap(value), channel.lfoCapSwitch));
+            }{ if (param == \lfoLowPassPotA) {
+                channel = self.channels[synthIndex*2 + 0];
+                channel.lfoLowPassPotKnob.value_(\lfoLowPassPotA.asSpec.unmap(value));
+                channel.lfoLowPassPotText.string_(self['normToLowPassFreqString'].value(\lfoLowPassPotA.asSpec.unmap(value)));
+            }{ if (param == \lfoLowPassPotB) {
+                channel = self.channels[synthIndex*2 + 1];
+                channel.lfoLowPassPotKnob.value_(\lfoLowPassPotB.asSpec.unmap(value));
+                channel.lfoLowPassPotText.string_(self['normToLowPassFreqString'].value(\lfoLowPassPotB.asSpec.unmap(value)));
+            }{ if (param == \lfoCapSwitchA) {
+                channel = self.channels[synthIndex*2 + 0];
+                channel.lfoCapSwitchCheckBox.value_(value);
+                channel.lfoCapSwitch = value;
+                channel.lfoPotText.string_(self['normToLfoFreqString'].value(channel.lfoPotKnob.value, channel.lfoCapSwitch));
+            }{ if (param == \lfoCapSwitchB) {
+                channel = self.channels[synthIndex*2 + 1];
+                channel.lfoCapSwitchCheckBox.value_(value);
+                channel.lfoCapSwitch = value;
+                channel.lfoPotText.string_(self['normToLfoFreqString'].value(channel.lfoPotKnob.value, channel.lfoCapSwitch));
+            }}}}}};
+        };
+    };
+
+    // add updater function to model dependant list
+    model.addDependant(self['updater']);
+
+    // add to appclock
+    AppClock.sched(0.0, {|time|
+        self.win.drawFunc.value();
+        0.05;
+    });
+
+    // remove this and updater function and from appclock on window close
+    self.win.onClose_({model.removeDependant(self['updater']); AppClock.clear});
 
     // return self
     self
