@@ -39,6 +39,8 @@
  - signal is essentially inverted b/c hi voltage -> hi illum -> low resistance
 
  TODO
+ -> ambientLight should be normalized as percent of light range
+ -> removed madd for now b/c should it apply to everything? not sure.
  -> TUNING: measure hysteresis depth
  -> FEATURE: implement frequency dependent lag
  -> TUNING: measure the lag
@@ -53,12 +55,12 @@
 Vactrol {
 
     *ar { |in = 0, attack = 0.030, decay = 2.0, hysteresis = 10, depth = 2,
-        mul = 1, add = 0|
+        ambientLight = 110.0, mul = 1, add = 0|
 
         var out;
 
         // [1] voltage to resistance
-        out = this.v2r(in);
+        out = this.v2r(in, ambientLight);
 
         // [2] lag
         out = this.lag(out, attack, decay);
@@ -67,17 +69,17 @@ Vactrol {
         out = this.hysteresis(out, time: hysteresis, base: depth);
 
         // [4] out
-        ^out.madd(mul: mul, add: add);
+        ^out;
 	}
 
 
     *monitor { |in = 0, attack = 0.030, decay = 2.0, hysteresis = 10, depth = 2,
-        mul = 1, add = 0|
+        ambientLight = 110.0, mul = 1, add = 0|
 
         var out, hyst;
 
         // [1] voltage to resistance
-        out = this.v2r(in);
+        out = this.v2r(in, ambientLight);
 
         // [2] lag
         out = this.lag(out, attack, decay);
@@ -86,18 +88,44 @@ Vactrol {
         hyst = this.hysteresisMonitor(out, time: hysteresis, base: depth);
 
         // [4] out: pre-hysteresis, post-hysteresis, internal state
-        ^[out.madd(mul: mul, add: add), hyst[0], hyst[1]]
+        ^[out, hyst[0], hyst[1]]
 	}
 
 
-    *v2r { |in = 0|
+    *ledMonitor { |in = 0, attack = 0.030, decay = 2.0, hysteresis = 10, depth = 2,
+        ambientLight = 110.0, mul = 1, add = 0|
+
+        var out, led, hyst;
+
+        // [1] voltage to resistance
+        led = this.v2r(in, ambientLight);
+
+        // [2] lag
+        hyst = this.lag(led, attack, decay);
+
+        // [3] hysteresis
+        hyst = this.hysteresisMonitor(hyst, time: hysteresis, base: depth);
+
+        // [4] out: post-hysteresis, internal state, led
+        ^[hyst[0], hyst[1], LinLin.ar(led/109, 0,1,1,0)];
+        // ^[hyst[0], hyst[1], in];
+	}
+
+
+    *v2r { |in = 0, ambientLight = 50.0|
 
          var out, pairs, curves;
 
         // pairs [voltage, resistance] response
-        pairs = [[0.0, 109.0], [1.0, 109.0], [1.9, 96.2], [2.0, 88.2],
+        /* pairs = [[0.0, 109.0], [1.0, 109.0], [1.9, 96.2], [2.0, 88.2],
             [3.0, 18.75], [4.0, 9.40], [5.0, 5.99], [6.0, 4.43], [7.0, 3.53],
-            [8.0, 2.94], [9.0, 2.56]];
+            [8.0, 2.94], [9.0, 2.56]];*/
+
+        // vactrol #1
+        pairs = [[0.0, 110.0], [1.0, 110.0], [1.9, 91.0], [2.0, 64.0],
+            [3.0, 8.24], [4.0, 4.00], [5.0, 2.79], [6.0, 2.18], [7.0, 1.83],
+            [8.0, 1.59], [9.0, 1.42], [10.0, 1.29], [11.0, 1.20], [12.0, 1.12],
+            [13.0, 1.05], [14.0, 0.99], [15.0, 0.94]];
 
         // interpolation curves
         curves = [1 ,1, 1, -2, -1, -1, -1, -1, -1, -1, -1];
@@ -105,8 +133,8 @@ Vactrol {
         // half-wave rectify
         out = Clip.ar(in, lo: 0, hi: 1);
 
-        // scale input to 9v and impose response curve
-        ^IEnvGen.ar(Env.pairs(pairs, curves), out * 9.0)
+        // scale input to 9v and impose response curve and clip to ambient light
+        ^Clip.ar(IEnvGen.ar(Env.pairs(pairs, curves), out * 9.0), 0, ambientLight)
     }
 
 
