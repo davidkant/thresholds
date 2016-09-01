@@ -565,6 +565,9 @@
     // draw brackets
     self.win.drawFunc_({
 
+        // white border
+        Pen.strokeColor_(Color.white).width_(2).strokeRect(Rect(0, 0, 926, 150).insetBy(2,2));
+
         // in pairs
         [0,2,4,6].do({|i|
 
@@ -656,6 +659,108 @@
 
     // remove drawRoutine and updater function on window close
     self.win.onClose_({model.removeDependant(self['updater']); self.drawRoutine.stop});
+
+    // return self
+    self
+
+});
+
+/* ~patchbay -------------------------------------------------------------------
+
+ controls what you hear... super just sketch so i can get some basic control now.
+
+ these post processin GUIS define and launch their own synths but still would like
+ to keep track of them on window close etc. need something to persist in the model
+ but don't want to hardcode it in. maybe these guys can add stuff to the model
+ dynamicall and on load check for it. that's nice. do this later.
+
+ -> have internal state variable that is separate from button val
+
+*/
+(
+~patchbay = {|model|
+
+    var self = ();
+
+    // formatting
+    self.buttonWidth = 60;
+    self.buttonHeight = 40;
+    self.paddingBetween = 10;
+    self.paddingFromEdge = 10;
+
+    // window
+    self.win = Window.new('patchbay', Rect(100, 500, 290, 60))
+    .front.alwaysOnTop_(true)
+    .background_(Color.black)
+    .drawFunc_({Pen.strokeColor_(Color.white).width_(2).strokeRect(Rect(0, 0, 290, 60).insetBy(2,2))});
+
+    // init channels 1 for each synth
+    self.channels = model.synths.collect({()});
+
+    // create channels
+    model.synths.do({|synth, i|
+
+        // local reference
+        var channel = self.channels[i];
+
+        // synth
+        channel.msynth = synth;
+
+        // channel container
+        channel.container = CompositeView(self.win, Rect(
+            i*(self.buttonWidth+self.paddingBetween)+self.paddingFromEdge,
+            self.paddingFromEdge,
+            self.buttonWidth,
+            self.buttonHeight));
+
+        // button
+        channel.button = Button(channel.container, Rect(0, 0, self.buttonWidth, self.buttonHeight))
+        .states_([["OFF", Color.black, Color.grey], ["ON", Color.black, Color.red]])
+        .action_({|butt|
+            if (butt.value == 1, {
+                // launch synth
+                channel.patchSynth = Synth(\StereoPair, [
+                    inBusA: ~model.mixedOutBusses[2*i],
+                    inBusB: ~model.mixedOutBusses[2*i+1],
+                    outBus: 0
+                ]);
+            }, {
+                // free synth
+                channel.patchSynth.free;
+            });
+        });
+
+    });
+
+    // keyboard action
+    self.win.view.keyDownAction_({|view, char, mod, unicode, keycode, key|
+
+        var index = char.asString.asInt - 1;
+
+        if ([0,1,2,3].includes(index), {
+
+            if (self.channels[index].button.value != 1, {
+
+                self.channels[index].button.valueAction_(1);
+
+            });
+        });
+    });
+
+    // keyboard action
+    self.win.view.keyUpAction_({|view, char, mod, unicode, keycode, key|
+
+        var index = char.asString.asInt - 1;
+
+        if ([0,1,2,3].includes(index), {
+
+            if (self.channels[index].button.value != 0, {
+
+                self.channels[index].button.valueAction_(0);
+
+            });
+        });
+    });
 
     // return self
     self

@@ -37,6 +37,7 @@
 ~atr1 = ~attractors.value(~model, style:1);
 ~atr2 = ~attractors.value(~model, style:2);
 ~lf = ~lfoscope.value(~model);
+~pb = ~patchbay.value(~model);
 
 // free ------------------------------------------------------------------------
 
