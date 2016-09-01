@@ -452,7 +452,7 @@
  -> bug: sometimes blinker misses a flash or flashes twice
     * fixed: monitoring on pre-LP b/c lowpass values caused some trouble
  -> bug: blinker faster than ~ 4hz undersampling blinker rendering... really just want all on it's b/c the impulse duty cycle is too narrow
- -> refactor: un-hardwire from 8 to number of lfo busses and the number of ACTIVE synths when that's rolling
+ -> refactor: un-hardwire from 8 to number of lfo busses and the number of ACTIVE synths when that's rolling, same with [0,2,4,6]
  -> question: gui animation best practice? i'm launching an appclock thread to driver the window drawFun
  -> question: best way to detect control bus triggers via appclock thread?
  -> snag:: computes from formula here, even if used static method of LFO still wouldn't correspond to instance variable changes
@@ -485,6 +485,7 @@
 
         };
 
+    // helpers
     self.normToLowPassFreqString = {|val| (1 / (2 * pi * (8e3 * (1 - val) * 100e3 * 0.1e-6 * 0.1e-6).sqrt)).asStringPrec(3) ++ ' Hz'};
 
     // create channels
@@ -499,7 +500,7 @@
 
         // a few local copies
         channel.lfoCapSwitch = 0;
-        channel.blinkerValue = 0;
+        channel.blinkerValue = -1;
 
         // channel container
         channel.container = CompositeView(self.win, Rect(i*115+10,60,115,100));
@@ -561,16 +562,42 @@
 
     });
 
-    // draw (update blinker)
+    // draw brackets
     self.win.drawFunc_({
+
+        // in pairs
+        [0,2,4,6].do({|i|
+
+            var p1, p2;
+
+            // reference points
+            p1 = self.channels[i].container.bounds.origin.translate(self.channels[i].lfoPotKnob.bounds.width/4@0);
+            p2 = self.channels[i+1].container.bounds.origin.translate(self.channels[i+1].lfoPotKnob.bounds.width*3/4@0);
+
+            // path
+            Pen.moveTo(p1.translate(0@(-4)));
+            Pen.lineTo(p1.translate(0@(-11)));
+            Pen.lineTo(p2.translate(0@(-11)));
+            Pen.lineTo(p2.translate(0@(-4)));
+
+            // stroke
+            Pen.strokeColor = Color.white;
+            Pen.stroke;
+
+        });
+
+    });
+
+    // update blinkers
+    self.updateBlinkers = {
 
         // check current lfo bus val against internal val
         model.lfoScopeBusses.get({|vals| vals.do({|val,i|
 
-            // if different redraw that channel
+            // if different update that channel
             if (val != self.channels[i].blinkerValue, {
 
-                // redraw
+                // update color
                 {self.channels[i].blinker.background_([Color.red, Color.grey(0.65)][1-val])}.defer;
 
                 // update internal val
@@ -578,7 +605,7 @@
             });
 
         })});
-    });
+    };
 
     // updater
     self.updater = { arg model, whatChanged ... args;
@@ -625,7 +652,7 @@
     model.addDependant(self['updater']);
 
     // fork drawFunc routine @60Hz on AppClock
-    self.drawRoutine = {loop{self.win.drawFunc.value(); 0.016666666666667.yield;}}.fork(AppClock);
+    self.drawRoutine = {loop{self['updateBlinkers'].value(); 0.016666666666667.yield;}}.fork(AppClock);
 
     // remove drawRoutine and updater function on window close
     self.win.onClose_({model.removeDependant(self['updater']); self.drawRoutine.stop});
