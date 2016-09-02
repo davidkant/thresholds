@@ -46,6 +46,16 @@
 
 ~lfoScopeBusses = Bus.control(s, 8);
 
+~vactrolScopeBusA1 = Bus.audio(s, 3);
+~vactrolScopeBusB1 = Bus.audio(s, 3);
+~vactrolScopeBusC1 = Bus.audio(s, 3);
+~vactrolScopeBusD1 = Bus.audio(s, 3);
+~vactrolScopeBusA2 = Bus.audio(s, 3);
+~vactrolScopeBusB2 = Bus.audio(s, 3);
+~vactrolScopeBusC2 = Bus.audio(s, 3);
+~vactrolScopeBusD2 = Bus.audio(s, 3);
+~vactrolScopeBusses = [~vactrolScopeBusA1, ~vactrolScopeBusB1, ~vactrolScopeBusC1, ~vactrolScopeBusD1, ~vactrolScopeBusA2, ~vactrolScopeBusB2, ~vactrolScopeBusC2, ~vactrolScopeBusD2];
+
 // patching bussses [signal, resistance]
 ~patchrNetA1toC1 = Bus.audio(s, 2);
 ~patchrNetC1toA1 = Bus.audio(s, 2);
