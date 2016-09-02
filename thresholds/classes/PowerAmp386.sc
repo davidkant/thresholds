@@ -36,9 +36,10 @@
 PowerAmp386 {
 
     *ar { |in, val = 0.5, gain = 20, potRmin = 0, potRmax = 10e3,
-        saturation = 0.44444444444444, dcblock = 0.995, mul = 1, add = 0|
+        saturation = 0.44444444444444, backflow = -0.66666666666666,
+        dcblock = 0.999, mul = 1, add = 0|
 
-        var r1, r2, vdivider, out;
+        var r1, r2, vdivider, out, overflow;
 
         // r1 and r2 from pot value [0,1]
         r1 = LinLin.kr(1-val, 0, 1, potRmin, potRmax);
@@ -51,7 +52,10 @@ PowerAmp386 {
         out = in * vdivider * gain;
 
         // saturation
-        out = Clip.ar(out, -1*saturation, saturation);
+        overflow = ((out < backflow ) * (out - backflow));
+
+        // saturate, - overflow, then saturate again
+        out = Clip.ar(Clip.ar(out, -1*saturation, saturation) - overflow, -1*saturation, saturation);
 
         // DC leak
         out = LeakDC.ar(out, coef: dcblock);
