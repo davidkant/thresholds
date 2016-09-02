@@ -9,16 +9,54 @@
 */
 
 (
-SynthDef(\ringer, {
-    arg inBusA, inBusB, outPos, atk=0.0, rel=0.0, amp=0.05, pan=1, dur=1, mute=1;
+SynthDef(\ringer, {arg inBusA, inBusB, outPos, atk=0.0, rel=0.0, amp=0.05,
+    pan=1, dur=1, mute=1;
+
     var sig, env;
+
     sig = InFeedback.ar(inBusA) * InFeedback.ar(inBusB);
     env = EnvGen.kr(Env.new([0,1,1,0], [atk,dur,rel],[1,-1]), doneAction: 2);
     sig = sig * env;
+
     Out.ar(0, Pan2.ar(sig * 0.5 * mute, pos:outPos));
+
 }).add
 );
 
+/*--|----1----|----2----|----3----|----4----|----5----|----6----|----7----|----8
+
+ stereo each pair
+
+*/
+
+(
+SynthDef(\StereoPair, {arg inBusA, inBusB, outBus;
+1
+    Out.ar(0, [InFeedback.ar(inBusA), InFeedback.ar(inBusB)]);
+
+}).add
+);
+
+/*--|----1----|----2----|----3----|----4----|----5----|----6----|----7----|----8
+
+ ringmod each pair to mono
+
+*/
+
+(
+SynthDef(\PairRinger, {arg inBusA, inBusB, outBus = 0, outPos = 0;
+
+    Out.ar(0, Pan2.ar(InFeedback.ar(inBusA) * InFeedback.ar(inBusB), pos:outPos));
+
+}).add
+);
+
+/*--|----1----|----2----|----3----|----4----|----5----|----6----|----7----|----8
+
+ launch ringers
+
+*/
+/*
 (
 p = Pbind(
     \instrument, \ringer,
@@ -67,6 +105,7 @@ r = Pbind(
 ).play
 );
 
-p.stop; ~model.clearFlags(0)
-q.stop; ~model.clearFlags(1)
-r.stop; ~model.clearFlags(2)
+p.stop; ~model.clearFlags(0);
+q.stop; ~model.clearFlags(1);
+r.stop; ~model.clearFlags(2);
+*/
