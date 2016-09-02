@@ -69,7 +69,10 @@ z = SynthDef(\feedbackPair, {
 
     // busses
     arg mainOutBusA, mainOutBusB, componentOutBusA, componentOutBusB,
-    rNetInBusA, rNetOutBusA, rNetInBusB, rNetOutBusB, scopeBus, lfoScopeBusA, lfoScopeBusB,
+    rNetInBusA, rNetOutBusA, rNetInBusB, rNetOutBusB,
+
+    // scope busses
+    scopeBus, lfoScopeBusA, lfoScopeBusB, vactrolScopeBusA, vactrolScopeBusB,
 
     otherIn,
 
@@ -83,10 +86,10 @@ z = SynthDef(\feedbackPair, {
     lfoCapSwitchB = 0, lfoLowPassPotA = 0.85, lfoLowPassPotB = 0.85,
 
     vactrolScalarA = 1, vactrolAttackA = 0.027, vactrolDecayA = 2.000,
-    vactrolHysteresisA = 1, vactrolDepthA = 1,
+    vactrolHysteresisA = 60, vactrolDepthA = 1,
 
     vactrolScalarB = 1, vactrolAttackB = 0.023, vactrolDecayB = 1.000,
-    vactrolHysteresisB = 1, vactrolDepthB = 1,
+    vactrolHysteresisB = 60, vactrolDepthB = 1,
 
     // gates
     koscGateA = 1, koscGateB = 1,
@@ -151,8 +154,8 @@ z = SynthDef(\feedbackPair, {
     sigTformB = Transformer1380.ar(sigPowAmpB); //.scope(name:"transformer");
 
     // [7] vactrol
-    sigVtrolA = vactrolScalarA * Vactrol.ledmonitor(sigTformA, attack: vactrolAttackA, decay: vactrolDecayA, hysteresis: vactrolHysteresisA, depth: vactrolDepthA); //.poll();
-    sigVtrolB = vactrolScalarB * Vactrol.ledmonitor(sigTformB, attack: vactrolAttackB, decay: vactrolDecayB, hysteresis: vactrolHysteresisB, depth: vactrolDepthB); //.poll();
+    sigVtrolA = vactrolScalarA * Vactrol.ledMonitor(sigTformA, attack: vactrolAttackA, decay: vactrolDecayA, hysteresis: vactrolHysteresisA, depth: vactrolDepthA); //.poll();
+    sigVtrolB = vactrolScalarB * Vactrol.ledMonitor(sigTformB, attack: vactrolAttackB, decay: vactrolDecayB, hysteresis: vactrolHysteresisB, depth: vactrolDepthB); //.poll();
 
     // sigVtrolA[0].poll(label: \VtrolA);
     // sigVtrolB[0].poll(label: \VtrolB);
@@ -180,12 +183,17 @@ z = SynthDef(\feedbackPair, {
     Out.ar(componentOutBusA, LeakDC.ar(koscA * [1, 0.8, 1]));  // SCOPE RATIO SCALE and toggle AC plot
     Out.ar(componentOutBusB, LeakDC.ar(koscB * [1, 0.8, 1]));  // SCOPE RATIO SCALE and toggle AC plot
 
-    // [*] scope outputs
+    // [*] mixedIn scope
     Out.ar(scopeBus, [sigMixedIn, sigLP]);
 
-    // [*] scope outputs
+    // [*] lfo scope
     Out.kr(lfoScopeBusA, [lfoSigA]);
     Out.kr(lfoScopeBusB, [lfoSigB]);
+
+    // [*] vactrol scope: [post-hysteresis, internal state, led]
+    Out.ar(vactrolScopeBusA, [sigVtrolA[0]/109, sigVtrolA[1], sigVtrolA[2]]);
+    Out.ar(vactrolScopeBusB, [sigVtrolB[0]/109, sigVtrolB[1], sigVtrolB[2]]);
+
     // Out.ar(scopeBusA, [lfoSigA, sigMixedIn, sigLP, sigMix2A, sigPreAmpA, sigPowAmpA, sigTformA/10, sigVtrolA[0]/109, sigVtrolA[1], sigVtrolA[2], koscA[0], koscA[1], koscA[2]]);
     // Out.ar(scopeBusB, [lfoSigB, sigMixedIn, sigLP, sigMix2B, sigPreAmpB, sigPowAmpB, sigTformB/10, sigVtrolB[0]/109, sigVtrolB[1], sigVtrolB[2], koscB[0], koscB[1], koscB[2]]);
 
