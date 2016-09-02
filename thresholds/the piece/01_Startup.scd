@@ -10,6 +10,7 @@ o = Server.local.options;
 o.sampleRate = 44100;
 o.blockSize = 64;
 s.boot;
-s.meter;
+// o.numAudioBusChannels_(128);
+// s.meter;
 // o.blockSize.postln;
 );
