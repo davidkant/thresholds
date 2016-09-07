@@ -20,7 +20,7 @@ SynthDef(\ringer, {arg inBusA, inBusB, outPos, atk=0.0, rel=0.0, amp=0.05,
 
     Out.ar(0, Pan2.ar(sig * 0.5 * mute, pos:outPos));
 
-}).add
+}).add;
 );
 
 /*--|----1----|----2----|----3----|----4----|----5----|----6----|----7----|----8
@@ -31,10 +31,10 @@ SynthDef(\ringer, {arg inBusA, inBusB, outPos, atk=0.0, rel=0.0, amp=0.05,
 
 (
 SynthDef(\StereoPair, {arg inBusA, inBusB, outBus;
-1
+
     Out.ar(0, [InFeedback.ar(inBusA), InFeedback.ar(inBusB)]);
 
-}).add
+}).add;
 );
 
 /*--|----1----|----2----|----3----|----4----|----5----|----6----|----7----|----8
@@ -48,64 +48,5 @@ SynthDef(\PairRinger, {arg inBusA, inBusB, outBus = 0, outPos = 0;
 
     Out.ar(0, Pan2.ar(InFeedback.ar(inBusA) * InFeedback.ar(inBusB), pos:outPos));
 
-}).add
+}).add;
 );
-
-/*--|----1----|----2----|----3----|----4----|----5----|----6----|----7----|----8
-
- launch ringers
-
-*/
-/*
-(
-p = Pbind(
-    \instrument, \ringer,
-    \inBusA, Pfunc({var i=8.rand;
-        {~model.clearFlags(0)}.defer;
-        {~model.setFlags(0, i, 1)}.defer;
-        ~model.mixedOutBusses[i]}),
-    \inBusB, Pfunc({var i=8.rand;
-        {~model.setFlags(0, i, 1)}.defer;
-        ~model.mixedOutBusses[i]}),
-    \outPos, Prand([-1, -0.666, -0.333, 0 , 0.333, 0.666, 1], inf),
-    \dur, Pwhite(0.15, 1.8, inf),
-    \mute, Prand([0,1,1], inf),
-).play
-);
-
-(
-q = Pbind(
-    \instrument, \ringer,
-    \inBusA, Pfunc({var i=8.rand;
-        {~model.clearFlags(1)}.defer;
-        {~model.setFlags(1, i, 1)}.defer;
-        ~model.mixedOutBusses[i]}),
-    \inBusB, Pfunc({var i=8.rand;
-        {~model.setFlags(1, i, 1)}.defer;
-        ~model.mixedOutBusses[i]}),
-    \outPos, Prand([-1, -0.666, -0.333, 0 , 0.333, 0.666, 1], inf),
-    \dur, Pwhite(0.15, 1.8, inf),
-    \mute, Prand([0,1,1], inf),
-).play
-);
-
-(
-r = Pbind(
-    \instrument, \ringer,
-    \inBusA, Pfunc({var i=8.rand;
-        {~model.clearFlags(2)}.defer;
-        {~model.setFlags(2, i, 1)}.defer;
-        ~model.mixedOutBusses[i]}),
-    \inBusB, Pfunc({var i=8.rand;
-        {~model.setFlags(2, i, 1)}.defer;
-        ~model.mixedOutBusses[i]}),
-    \outPos, Prand([-1, -0.666, -0.333, 0 , 0.333, 0.666, 1], inf),
-    \dur, Pwhite(0.15, 1.8, inf),
-    \mute, Prand([0,1,1], inf),
-).play
-);
-
-p.stop; ~model.clearFlags(0);
-q.stop; ~model.clearFlags(1);
-r.stop; ~model.clearFlags(2);
-*/
