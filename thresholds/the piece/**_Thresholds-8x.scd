@@ -23,6 +23,7 @@
 (~dir ++ "06_GUI.scd").load;                 // Load GUIs
 (~dir ++ "07_MidiControl.scd").load;         // Some Midi Control
 (~dir ++ "09_PostProcessing-8x2.scd").load;  // KOSC -> DAC via RingMods
+(~dir ++ "99_Ringers.scd").load;             // White Walkers --- oh my!
 (~dir ++ "99_Walkers.scd").load;             // White Walkers --- oh my!
 
 // guis ------------------------------------------------------------------------
@@ -34,9 +35,10 @@
 
 ~octo = ~octoScope.value(~model);
 ~lp = ~lowPassScope.value(~model);
-~atr1 = ~attractors.value(~model, style:1);
 ~atr2 = ~attractors.value(~model, style:2);
 ~lf = ~lfoscope.value(~model);
+~vtrol = ~vactrolscope.value(~model);
+~bg = ~bigknob.value(~model);
 ~pb = ~patchbay.value(~model);
 
 // free ------------------------------------------------------------------------
