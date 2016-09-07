@@ -269,7 +269,10 @@
     self.knobSize = 50;
 
     // window
-    self.win = Window.new('LowPass', Rect(100,500,425,138)).front.alwaysOnTop_(true);
+    self.win = Window.new('LowPass', Rect(100,500,425,138))
+    .front.alwaysOnTop_(true)
+    .background_(Color.black);
+    self.win.drawFunc_({Pen.strokeColor_(Color.white).width_(2).strokeRect(self.win.bounds.moveTo(0,0).insetBy(2,2))});
 
     // init channels 1 for each synth
     self.channels = model.synths.collect({()});
@@ -299,6 +302,7 @@
         .value_(1.0)
         .decimals_(3)
         .font_(Font.default.size_(12))
+        .normalColor_(Color.white)
         .align_(\right)
         .background_(Color.clear)
         .action_({|number| if (channel.msynth.notNil) {model.setSynth(channel.msynth, \lowPassPot, number.value)}});
@@ -307,6 +311,7 @@
         channel.lowPassPotFreqText = StaticText(channel.container, Rect(channel.container.bounds.width - 64, 33, 58, 20))
         .string_(self['numToFreqString'].value(0))
         .font_(Font.default.size_(9))
+        .stringColor_(Color.white)
         .align_(\right)
         .background_(Color.clear)
         .action_({|number| if (channel.msynth.notNil) {model.setSynth(channel.msynth, \lowPassPot, number.value)}});
@@ -397,7 +402,9 @@
         500,
         self.scopeSize*4+self.paddingFromEdge+self.paddingFromEdge+self.paddingCeneterColumn,
         self.scopeSize*2+self.paddingFromEdge+self.paddingFromEdge+self.paddingCeneterColumn)
-    ).front.alwaysOnTop_(true);
+    ).front.alwaysOnTop_(true)
+    .background_(Color.black);
+    self.win.drawFunc_({Pen.strokeColor_(Color.white).width_(2).strokeRect(self.win.bounds.moveTo(0,0).insetBy(2,2))});
 
     // self.win.background_(Color.black);
 
@@ -665,6 +672,145 @@
 
 });
 
+/* ~vactrolscope ---------------------------------------------------------------
+
+attack
+decay
+time
+depth
+offset
+
+*/
+
+(
+~vactrolscope = {|model|
+
+    var self = ();
+
+    // settings
+    self.channelWidth = 40;
+    self.channelHeight = 180;
+    self.paddingBetween = 5;
+    self.paddingFromEdge = 10;
+
+    // window
+    self.win = Window.new('~vactrolscope', Rect(100, 500, (self.channelWidth*8)+(self.paddingBetween*7)+(self.paddingFromEdge*2), self.channelHeight+self.paddingFromEdge+self.paddingFromEdge))
+    .front.alwaysOnTop_(true)
+    .background_(Color.black);
+    self.win.drawFunc_({Pen.strokeColor_(Color.white).width_(2).strokeRect(self.win.bounds.moveTo(0,0).insetBy(2,2))});
+
+    // init channels
+    self.channels = model.vactrolScopeBusses.collect({()});
+
+    // loop through all vactrolScopeBusses
+    model.vactrolScopeBusses.do({|bus, i|
+
+        // local referenceKnob
+        var channel = self.channels[i];
+
+        // synth and which of pair
+        channel.msynth = model.synths[i.div(2)];
+        channel.aorb = [\A,\B][i%2];
+
+        // channel container
+        channel.container = UserView(self.win, Rect(
+            i*(self.channelWidth+self.paddingBetween) + self.paddingFromEdge,
+            self.paddingFromEdge,
+            self.channelWidth,
+            self.channelHeight)).background_(Color.cyan);
+
+        // oscilloscope
+        channel.scopeView = CompositeView(channel.container, Rect(0, 0, channel.container.bounds.width, self.channelHeight-self.paddingFromEdge-self.paddingFromEdge+20));
+        channel.scope = Stethoscope.new(bus.server, 3, bus.index, view: channel.scopeView, zoom: 8);
+        channel.scope.yZoom_(0.8);
+        channel.scope.view.bounds_(Rect(-2, -28, channel.scopeView.bounds.width+21, channel.scopeView.bounds.height+47+30));
+        channel.scope.scopeView.waveColors_([Color.white, Color.magenta, Color.white]);
+        channel.scope.scopeView.background_(Color.black);
+        channel.scope.scopeView.fill_(true);
+        channel.scope.style_(0);
+
+    });
+
+    /* in progress: plot y axis ticks and labels
+
+    // plot
+    self.plot = ();
+
+    // formatting
+    self.plot.tickLength = 5;
+    self.plot.labelWidth = 24;
+
+    // plot view
+    self.plot.view = UserView(self.win, Rect(
+        self.paddingFromEdge,
+        self.paddingFromEdge,
+        self.win.bounds.width-self.paddingFromEdge-self.paddingFromEdge+50,
+    self.channelHeight)).background_(Color.clear);
+
+    // y-axis
+    self.plot.numTicks = 4;
+    self.plot.offset = 0.0;
+    self.plot.depth = 2;
+    self.plot.skew = {|val| if (val < self.plot.offset, {val.linlin(-1,0,-1,self.plot.offset)}, {val.linlin(0,1,self.plot.offset,1)})};
+    self.plot.tickVals = (-1, 2/self.plot.numTicks-1 .. 1);
+    self.plot.ticks = self.plot.tickVals.collect(self.plot['skew']);
+
+    // draw
+    self.plot.view.drawFunc_({
+
+        // x pos
+        var xPos = self.plot.view.bounds.width-self.plot.labelWidth-self.plot.tickLength-self.plot.tickLength;
+
+        // formatting
+        Pen.strokeColor_(Color.magenta).color_(Color.magenta);
+
+        // vertical axis
+        Pen.moveTo(xPos@10);
+        Pen.lineTo(xPos@(self.plot.view.bounds.height-10));
+        Pen.width_(1).smoothing_(false).stroke();
+
+        // ticks
+        self.plot.ticks.do({|y_norm, i|
+
+            // y pos
+            var yPos, maj;
+
+            maj = ([-1.0, 0.0, 1.0].includes(self.plot.tickVals[i]));
+            yPos = y_norm.linlin(-1,1,self.plot.view.bounds.height-10,10);
+
+            // draw tick
+            Pen.moveTo((xPos-self.plot.tickLength)@yPos);
+            Pen.lineTo((xPos+self.plot.tickLength)@yPos);
+            Pen.width_(if (maj, {1}, {1})).smoothing_(false).stroke();
+
+            // draw label
+            Pen.font_(Font( "Arial", 10 ));
+            Pen.stringAtPoint(self.plot.depth.pow(self.plot.tickVals[i]).asStringPrec(3),
+            (self.plot.view.bounds.width-self.plot.labelWidth+6)@yPos-6);
+        });
+
+        /*        // dashed lines
+        self.plot.ticks.do({|y_norm, i|
+
+        // y pos
+        var yPos = y_norm.linlin(-1,1,self.plot.view.bounds.height-10,10);
+
+        // draw line
+        Pen.moveTo(0@yPos);
+        Pen.lineTo((xPos-self.plot.tickLength-10)@yPos);
+        Pen.lineDash_(FloatArray.newFrom([2.0,2.0]));
+        Pen.width_(1).smoothing_(false).strokeColor_(Color.magenta(alpha:0.75)).stroke();
+
+        });*/
+
+    });
+    */
+
+    // return self
+    self
+
+});
+
 /* ~patchbay -------------------------------------------------------------------
 
  controls what you hear... super just sketch so i can get some basic control now.
@@ -761,6 +907,164 @@
             });
         });
     });
+
+    // return self
+    self
+
+});
+
+/* ~big knob -------------------------------------------------------------------
+
+how do init for all 8? what updaer? => this needs it's own spot in the model...
+shape and offset / level for vatrol
+vatrol shape plot
+lettering "VACTROL"
+asymmetry
+
+*/
+
+(
+~bigknob = {|model|
+
+    var self = ();
+
+    // formatting
+    self.bigKnobSize = 300;
+    self.smallKnobSize = 60;
+
+    // spec
+    self.spec = ControlSpec(1, 24*60*60, \exp);
+
+    // log scale
+    self.ticks = ((1..10) * 1) ++ ((1..10) * 60) ++ ((1..10) * 60*60);
+    // self.ticks = ((1..9) * 1) ++ ((1..9) * 10) ++ ((1..9) * 100) ++ ((1..9) * 1000) ++ ((1..9) * 10000)
+    // self.ticks = (1..9)/10 * 60) ++ ((1..9)/10 * 60*60) ++ ((1..10)/10 * 60*60*24)
+    // self.ticks = ((1..10) * 1) ++ [20,30,40,50] ++ ((1..10) * 60) ++ [600*2, 600*3, 600*4, 600*5] ++ ((1..10) * 60*60)
+
+    // window
+    self.win = Window.new('bigknob', Rect(100, 500, 600, 400))
+    .front.alwaysOnTop_(true)
+    .background_(Color.black)
+    .drawFunc_({Pen.strokeColor_(Color.white).width_(2).strokeRect(self.win.bounds.moveTo(0,0).insetBy(2,2))});
+
+    // helpers
+    self.stringFormat = {|val|
+
+        if (val < 60) {
+            val.asStringPrec(3) ++ " sec";
+        } { if (val < (60*60)) {
+            (val/60).asStringPrec(3) ++ " min";
+        } {
+            (val / (60*60)).asStringPrec(3) ++ " hour"
+        }}};
+
+    // helpers
+    self.stringFormatColor = {|val|
+
+        if (val < 60) {
+            Color.magenta;
+        } { if (val < (60*60)) {
+            Color.cyan;
+        } {
+            Color.yellow;
+        }}};
+
+    // big knob view
+    self.bigKnobView = UserView(self.win, Rect(self.bigKnobSize/2, 90, self.bigKnobSize, self.bigKnobSize))
+    .background_(Color.clear);
+
+    // big knob
+    self.bigKnob = Knob(self.bigKnobView, Rect(self.bigKnobView.bounds.width*0.10, self.bigKnobView.bounds.height*0.10, self.bigKnobView.bounds.width*0.80, self.bigKnobView.bounds.width*0.80));
+    self.bigKnob.color_(self.bigKnob.color.put(1, Color.white));
+    self.bigKnob.color_(self.bigKnob.color.put(2, Color.clear));
+
+    // big knob text
+    self.bigKnobText = StaticText(self.bigKnobView, Rect(self.bigKnobView.bounds.width/2-35, self.bigKnobView.bounds.height-40, 70, 20))
+    .string_("1.00").stringColor_(Color.magenta).align_(\center);
+
+    // big knob action
+    self.bigKnob.action_({|knob|
+
+        // set all synths
+        model.synths.do({|synth|
+
+            if (synth.notNil) {
+                model.setSynth(synth, \vactrolHysteresisA, self.spec.map(knob.value));
+                model.setSynth(synth, \vactrolHysteresisB, self.spec.map(knob.value));
+            }
+
+        });
+
+        // text
+        self.bigKnobText.string_(self['stringFormat'].value(self.spec.map(knob.value)));
+        self.bigKnobText.stringColor_(self['stringFormatColor'].value(self.spec.map(knob.value)));
+
+    });
+
+    // draw
+    self.bigKnobView.drawFunc_({|view|
+
+        // draw regions
+        self.spec.unmap([1, 60, 60*60, 60*60*24]).doAdjacentPairs({|val1, val2, color|
+
+            var theta1, theta2, theta3, theta4;
+
+            theta1 = val1.linlin(0, 1, 0.65pi, 2.35pi);
+            theta2 = val2.linlin(0, 1, 0.65pi, 2.35pi);
+            theta3 = val1.linlin(0, 1, -0.35pi, 1.35pi);
+            theta4 = val2.linlin(0, 1, -0.35pi, 1.35pi);
+
+            Pen.addAnnularWedge(view.bounds.moveToPoint(0@0).center,
+                // 0.65*view.bounds.width/2,
+                // 0.9*view.bounds.width/2,
+                // 0.72*view.bounds.width/2,
+                // 0.9*view.bounds.width/2,
+                0.85*view.bounds.width/2,
+                0.9*view.bounds.width/2,
+                // 0.72*view.bounds.width/2,
+                // 0.8*view.bounds.width/2,
+                theta1,
+                theta2-theta1);
+
+            // Pen.rotate((theta3+((theta4-theta3)/2)), v.bounds.moveToPoint(0@0).center.x, v.bounds.moveToPoint(0@0).center.y);
+            // Pen.stringAtPoint("seconds", (0.0@1)*v.bounds.moveToPoint(0@7.neg).center, Font( "Helvetica", 14), Color.white);
+            // Pen.rotate((theta3+((theta4-theta3)/2)).neg, v.bounds.moveToPoint(0@0).center.x, v.bounds.moveToPoint(0@0).center.y);
+
+            Pen.fillColor_([Color.magenta, Color.cyan, Color.yellow][color].alpha_(0.5)).fill();
+
+        });
+
+        // draw ticks
+        self.ticks.do({|val|
+
+            var theta = self.spec.unmap(val).linlin(0, 1, -0.32pi, 1.35pi);
+
+            Pen.rotate(theta, view.bounds.moveToPoint(0@0).center.x, view.bounds.moveToPoint(0@0).center.y);
+            Pen.moveTo((0.35@1)*view.bounds.moveToPoint(0@0).center);
+            Pen.lineTo((0.17@1)*view.bounds.moveToPoint(0@0).center);
+            Pen.color_(Color.white).smoothing_(true).width_(2).stroke();
+            // Pen.stringAtPoint(val.asString, (0.0@1)*view.bounds.moveToPoint(0@7.neg).center, Font( "Helvetica", 14), Color.white);
+            Pen.rotate(-1*theta, view.bounds.moveToPoint(0@0).center.x, view.bounds.moveToPoint(0@0).center.y);
+
+        });
+
+    });
+
+    // other knobs
+    self.smallKnobPaddingFromTop = 30;
+    self.smallKnobPadding = 50;
+
+    self.attackKnob = Knob(self.win, Rect(self.smallKnobPadding, self.smallKnobPaddingFromTop, self.smallKnobSize, self.smallKnobSize));
+    self.attackKnob.color_(self.attackKnob.color.put(1, Color.grey));
+
+    self.decayKnob = Knob(self.win, Rect(self.win.bounds.width-self.smallKnobPadding-self.smallKnobSize, self.smallKnobPaddingFromTop, self.smallKnobSize, self.smallKnobSize));
+    self.decayKnob.color_(self.decayKnob.color.put(1, Color.grey));
+
+    self.depthKnob = Knob(self.win, Rect(self.smallKnobPadding, self.smallKnobPadding+self.smallKnobPaddingFromTop+self.smallKnobSize, self.smallKnobSize, self.smallKnobSize));
+    self.depthKnob.color_(self.depthKnob.color.put(1, Color.grey));
+
+    self.offsetKnob = Knob(self.win, Rect(self.win.bounds.width-self.smallKnobPadding-self.smallKnobSize, self.smallKnobPadding+self.smallKnobPaddingFromTop+self.smallKnobSize, self.smallKnobSize, self.smallKnobSize));
+    self.offsetKnob.color_(self.offsetKnob.color.put(1, Color.grey));
 
     // return self
     self
