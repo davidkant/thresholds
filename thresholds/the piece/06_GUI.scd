@@ -1070,3 +1070,268 @@ asymmetry
     self
 
 });
+
+/* ~photodesigner --------------------------------------------------------------
+
+ vactrol photresistor innards
+
+ * resize knobs to 40 and fix vertical alignment
+ * hook up number boxes
+ * labels num boxes maybe even Statictext
+ * responder so can respond to model
+ * needs master data spot in the model
+ * do inits from model not hardwired
+ * along those lines, spec for vactrolAttack (not A or B) or will that break simple GUI?
+ * add voltage divider?
+ * exp or linear? ... nice to go to 0
+ * need to query the model for master value so can set synth once
+ * this use of plotBounds inset plus adding offset seems not slick most
+ * [..-1] syntax to remove last element?
+ * draw smooth curve instead of a line
+
+*/
+
+(
+(
+~photodesigner = {|model|
+
+    var self = ();
+
+    // formatting
+    self.plotColor = Color.magenta;
+
+    // params
+    self.maxMu = 666;
+    self.maxCycle = 13;
+    self.mu = 200;
+    self.attack = 0.03;
+    self.decay = 1;
+    self.cycle = 12;
+
+    // plots
+    self.plot1 = ();
+    self.plot2 = ();
+
+    // buffer
+    self.dataBuff = Buffer.alloc(s, self.maxMu * self.maxCycle, 1);
+
+    // synthdef
+    SynthDef(\makeData, {|mu, attack = 0.1, decay = 1|
+        var sig = LFPulse.ar(44100.0/mu);
+        RecordBuf.ar(Vactrol.ar(sig, attack: attack, decay: decay, depth: 1), self.dataBuff, doneAction: 2, loop: 0);
+    }).add;
+
+    // window
+    self.win = Window.new('~photodesigner', Rect(900, 300, 345, 290))
+    .front.alwaysOnTop_(true)
+    .background_(Color.black)
+    .drawFunc_({Pen.strokeColor_(Color.white).width_(2).strokeRect(self.win.bounds.moveTo(0,0).insetBy(2,2))});
+
+    // plots
+    self.plot1.view = UserView(self.win, Rect(100,15,250,120)).background_(Color.clear);
+    self.plot1.data = [];
+    self.plot2.view = UserView(self.win, Rect(100,155,250,120)).background_(Color.clear);
+    self.plot2.data = [];
+
+    // update plot data and refresh
+    self.updateData = {fork { var cycle, mu;
+
+        cycle = self.cycle;
+        mu = self.mu;
+
+        // make data
+        Synth(\makeData, [\mu, self.mu, \attack, self.attack, \decay, self.decay]).waitForFree;
+
+        // get data for plot2
+        self.dataBuff.getn((cycle - 1.5 * mu).floor, self.mu, {|data|
+            self.plot1.data = data;
+            {self.plot1.view.refresh()}.defer;
+        });
+
+        // get data for plot2
+        self.dataBuff.getn(0, self.maxMu * self.maxCycle / 2, {|data|
+            // self.dataBuff.getn(0, self.mu * self.cycle / 2, {|data|
+            self.plot2.data = data;
+            {self.plot2.view.refresh()}.defer;
+        });
+    }};
+
+    // knob formatting
+    self.knobSize = 50;
+    self.numBoxWidth = 50;
+    self.numBoxHeight = 20;
+    self.paddingBetweenKnobAndText = 5;
+    self.paddingBetweenTextAndKnob = 15;
+    self.paddingFromEdge = 15;
+
+    // attack knob
+    self.attackKnob = Knob(self.win, Rect(self.paddingFromEdge,self.paddingFromEdge,self.knobSize,self.knobSize));
+    self.attackKnob.color_(self.attackKnob.color.put(1, Color.white).put(2, Color.black)).value_(\vactrolAttackA.asSpec.unmap(self.attack))
+    .action_({|knob|
+        self.attack = \vactrolAttackA.asSpec.map(knob.value);
+        self['updateData'].value();
+        self.attackText.value_(\vactrolAttackA.asSpec.map(knob.value).postln);
+    });
+
+    // attack text
+    self.attackText = NumberBox(self.win, Rect(self.paddingFromEdge,self.attackKnob.bounds.bottom+self.paddingBetweenKnobAndText,self.numBoxWidth,self.numBoxHeight))
+    .value_(self.attack)
+    .decimals_(3)
+    .font_(Font.default.size_(12))
+    .normalColor_(Color.white)
+    .align_(\right)
+    .background_(Color.clear);
+
+    // decay knob
+    self.decayKnob = Knob(self.win, Rect(self.paddingFromEdge,self.attackText.bounds.bottom+self.paddingBetweenTextAndKnob,self.knobSize,self.knobSize));
+    self.decayKnob.color_(self.decayKnob.color.put(1, Color.white).put(2, Color.black)).value_(\vactrolDecayA.asSpec.unmap(self.decay))
+    .action_({|knob|
+        self.decay = \vactrolDecayA.asSpec.map(knob.value);
+        self['updateData'].value();
+        self.decayText.value_(\vactrolDecayA.asSpec.map(knob.value).postln);
+    });
+
+    // decay text
+    self.decayText = NumberBox(self.win, Rect(self.paddingFromEdge,self.decayKnob.bounds.bottom+self.paddingBetweenKnobAndText,self.numBoxWidth,self.numBoxHeight))
+    .value_(self.decay)
+    .decimals_(3)
+    .font_(Font.default.size_(12))
+    .normalColor_(Color.white)
+    .align_(\right)
+    .background_(Color.clear);
+
+    // freq knob
+    self.freqKnob = Knob(self.win, Rect(self.paddingFromEdge,self.decayText.bounds.bottom+self.paddingBetweenTextAndKnob,self.knobSize,self.knobSize));
+    self.freqKnob.color_(self.freqKnob.color.put(1, Color.white).put(2, Color.black)).value_(0.5)
+    .action_({|knob|
+        self.mu = (knob.value * 666).asInteger;
+        // self['updateData'].value();
+        if (self.updateDataRoutine.isNil.not) {self.updateDataRoutine.stop};
+        self.updateDataRoutine = self['updateData'].value();
+    });
+
+    // freq text
+    self.freqText = NumberBox(self.win, Rect(self.paddingFromEdge,self.freqKnob.bounds.bottom+self.paddingBetweenKnobAndText,self.numBoxWidth,self.numBoxHeight))
+    .value_(0.5)
+    .decimals_(3)
+    .font_(Font.default.size_(12))
+    .normalColor_(Color.white)
+    .align_(\right)
+    .background_(Color.clear);
+
+    // draw plot1
+    self.plot1.view.drawFunc_({|view|
+
+        if (self.plot1.data != []) {
+
+            var toXpix, toYpix, plotBounds;
+
+            plotBounds = Rect(0, 10, view.bounds.width-50, view.bounds.height-20);
+            toXpix = {|x| x * plotBounds.width};
+            toYpix = {|y| 1 - y * plotBounds.insetBy(1,1).height + 10};
+
+            // plot vactrol curve
+            (self.plot1.data - self.plot1.data.minItem).normalize().do({|val, i|
+
+                if (i == 0)
+                {
+                    Pen.moveTo(toXpix.value(i/(self.plot1.data.size-1))@toYpix.value(val));
+                } {
+                    Pen.lineTo(toXpix.value(i/(self.plot1.data.size-1))@toYpix.value(val));
+                };
+            });
+
+            // render
+            Pen.strokeColor_(self.plotColor).width_(2).stroke();
+
+            // plot square wave
+            [[0,0],[1/2,0],[1/2,1],[1,1]].do({|vals, i|
+
+                if (i == 0)
+                {
+                    Pen.moveTo(toXpix.value(vals[0])@toYpix.value(vals[1]));
+                } {
+                    Pen.lineTo(toXpix.value(vals[0])@toYpix.value(vals[1]));
+                };
+            });
+
+            // render
+            Pen.lineDash_(FloatArray.newFrom([3.0,3.0]));
+            Pen.strokeColor_(Color.grey).width_(1).smoothing_(false).stroke();
+
+            // bounds
+            Pen.stringAtPoint(self.plot1.data.maxItem.asStringPrec(2), toXpix.value(1.05)@toYpix.value(1.065), Font("Arial", 11), self.plotColor);
+            Pen.stringAtPoint(self.plot1.data.minItem.asStringPrec(2), toXpix.value(1.05)@toYpix.value(0.065), Font("Arial", 11), self.plotColor);
+            Pen.stringAtPoint('kΩ', toXpix.value(1.05)@toYpix.value(0.565), Font("Arial", 11), Color.grey);
+        };
+
+    });
+
+    // draw plot 2
+    self.plot2.view.drawFunc_({|view|
+
+        if (self.plot2.data != []) {
+
+            var toXpix, toYpix, plotBounds, normed, avg;
+
+            plotBounds = Rect(0, 10, view.bounds.width-50, view.bounds.height-20);
+            toXpix = {|x| x * plotBounds.width};
+            toYpix = {|y| 1 - y * plotBounds.insetBy(1,1).height + 10};
+
+            // normed = (self.plot2.data - self.plot2.data.minItem).normalize(); // normalize to range
+            normed = (self.plot2.data).normalize(); // normalize to 0
+            avg = normed.clump(self.mu).collect({|clump| clump.sum / clump.size});
+            avg = avg[..avg.size-2];
+
+            // plot vactrol curve
+            normed.do({|val, i|
+
+                if (i == 0)
+                {
+                    Pen.moveTo(toXpix.value(i/(self.plot2.data.size-1))@toYpix.value(val));
+                } {
+                    Pen.lineTo(toXpix.value(i/(self.plot2.data.size-1))@toYpix.value(val));
+                };
+            });
+
+            // render
+            Pen.strokeColor_(self.plotColor).width_(1).stroke();
+
+            //
+            Pen.moveTo(toXpix.value(0.15)@toYpix.value(0));
+            Pen.lineTo(toXpix.value(1)@toYpix.value(0));
+            Pen.lineTo(toXpix.value(1)@toYpix.value(0.08));
+            Pen.lineDash_(FloatArray.newFrom([3,3]));
+            Pen.strokeColor_(Color.grey.alpha_(0.75)).width_(1).smoothing_(false).stroke();
+            Pen.stringAtPoint(self.plot2.data.size.asString ++ ' samples', toXpix.value(0.68)@toYpix.value(0.12), Font("Arial", 10), Color.grey);
+
+            // plot average curve
+            Pen.moveTo(toXpix.value(0)@toYpix.value(0));
+            avg.do({|val, i| Pen.lineTo(toXpix.value(i+0.5*self.mu/(self.plot2.data.size-1))@toYpix.value(val))});
+            Pen.lineTo(toXpix.value(1)@toYpix.value(avg.last));
+            // Pen.lineTo(toXpix.value(self.plot2.data.shape[0]-1)@toYpix.value(0));
+
+            // render
+            Pen.lineDash_(FloatArray.newFrom([2,2]));
+            Pen.strokeColor_(Color.cyan.alpha_(0.75)).width_(1).smoothing_(false).stroke();
+
+            // bounds
+            Pen.stringAtPoint('0.0', toXpix.value(1.05)@toYpix.value(0.065), Font("Arial", 11), self.plotColor);
+            Pen.stringAtPoint((avg.last.linlin(0,1,self.plot2.data.minItem, self.plot2.data.maxItem)).asStringPrec(2), toXpix.value(1.05)@toYpix.value(avg.last*1.1), Font("Arial", 11), Color.cyan.alpha_(0.75));
+        };
+
+    });
+
+    // inits
+    self['updateData'].value();
+
+    // on close free buffer
+    self.win.onClose_({self.dataBuff.close; self.dataBuff.free});
+
+    // return self
+    self
+
+});
+
+~pd = ~photodesigner.value(~model)
+)
