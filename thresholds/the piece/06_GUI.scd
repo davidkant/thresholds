@@ -6,6 +6,12 @@
  * some consistent formatting like and padding border?
  * this synth index stuff ...
 
+ TODO
+ * faster response have an update param function that gets called directly by
+   knob movement and keep track in the responder who called it so don't re-up
+   date. currently knob goes through the model and back to make GUI changes.
+ * add whoChangedIt to updaters
+
 */
 
 
@@ -1075,19 +1081,17 @@ asymmetry
 
  vactrol photresistor innards
 
- * resize knobs to 40 and fix vertical alignment
+ doing
  * hook up number boxes
- * labels num boxes maybe even Statictext
- * responder so can respond to model
- * needs master data spot in the model
- * do inits from model not hardwired
- * along those lines, spec for vactrolAttack (not A or B) or will that break simple GUI?
+ * resize knobs to 40 and fix vertical alignment and add labels
+ * do inits from model not hardwired (have to store in master)
+ * freq label and conversion
+ * freq knob draw while
+
  * add voltage divider?
- * exp or linear? ... nice to go to 0
- * need to query the model for master value so can set synth once
- * this use of plotBounds inset plus adding offset seems not slick most
- * [..-1] syntax to remove last element?
  * draw smooth curve instead of a line
+ * along those lines, spec for vactrolAttack (not A or B) or will that break simple GUI?
+ * [..-1] syntax to remove last element?
 
 */
 
@@ -1167,11 +1171,7 @@ asymmetry
     // attack knob
     self.attackKnob = Knob(self.win, Rect(self.paddingFromEdge,self.paddingFromEdge,self.knobSize,self.knobSize));
     self.attackKnob.color_(self.attackKnob.color.put(1, Color.white).put(2, Color.black)).value_(\vactrolAttackA.asSpec.unmap(self.attack))
-    .action_({|knob|
-        self.attack = \vactrolAttackA.asSpec.map(knob.value);
-        self['updateData'].value();
-        self.attackText.value_(\vactrolAttackA.asSpec.map(knob.value).postln);
-    });
+    .action_({|knob| model.setSynthMaster(\vactrolAttack, \vactrolAttackA.asSpec.map(knob.value), knob)});
 
     // attack text
     self.attackText = NumberBox(self.win, Rect(self.paddingFromEdge,self.attackKnob.bounds.bottom+self.paddingBetweenKnobAndText,self.numBoxWidth,self.numBoxHeight))
@@ -1185,11 +1185,7 @@ asymmetry
     // decay knob
     self.decayKnob = Knob(self.win, Rect(self.paddingFromEdge,self.attackText.bounds.bottom+self.paddingBetweenTextAndKnob,self.knobSize,self.knobSize));
     self.decayKnob.color_(self.decayKnob.color.put(1, Color.white).put(2, Color.black)).value_(\vactrolDecayA.asSpec.unmap(self.decay))
-    .action_({|knob|
-        self.decay = \vactrolDecayA.asSpec.map(knob.value);
-        self['updateData'].value();
-        self.decayText.value_(\vactrolDecayA.asSpec.map(knob.value).postln);
-    });
+    .action_({|knob| model.setSynthMaster(\vactrolDecay, \vactrolDecayA.asSpec.map(knob.value), knob)});
 
     // decay text
     self.decayText = NumberBox(self.win, Rect(self.paddingFromEdge,self.decayKnob.bounds.bottom+self.paddingBetweenKnobAndText,self.numBoxWidth,self.numBoxHeight))
@@ -1322,11 +1318,58 @@ asymmetry
 
     });
 
-    // inits
-    self['updateData'].value();
+    // updater
+    self.updater = { arg model, whatChanged ... args;
+
+        // respond to setSynthMaster
+        if (whatChanged == \setSynthMaster) {
+
+            // unpack args
+            var param, value, whoChangedIt;
+            param = args[0]; value = args[1]; whoChangedIt = args[2];
+
+            // update GUI: vactrolAttack
+            if (param == \vactrolAttack) {
+
+                // set knob
+                if (whoChangedIt != self.attackKnob) {self.attackKnob.value_(\vactrolAttackA.asSpec.unmap(value))};
+
+                // set text
+                if (whoChangedIt != self.attackText) {self.attackText.value_(value)};
+
+                // set internal values
+                self.attack = value;
+
+                // update plots
+                self['updateData'].value();
+
+            // update GUI: vactrolDecay
+            }{ if (param == \vactrolDecay) {
+
+                // set knob
+                if (whoChangedIt != self.decayKnob) {self.decayKnob.value_(\vactrolDecayA.asSpec.unmap(value))};
+
+                // set text
+                if (whoChangedIt != self.decayText) {self.decayText.value_(value)};
+
+                // set internal values
+                self.decay = value;
+
+                // update plots
+                self['updateData'].value();
+
+            }};
+        };
+    };
+
+    // add updater function to model dependant list
+    model.addDependant(self['updater']);
 
     // on close free buffer
-    self.win.onClose_({self.dataBuff.close; self.dataBuff.free});
+    self.win.onClose_({model.removeDependant(self['updater']); self.dataBuff.close; self.dataBuff.free});
+
+    // inits
+    self['updateData'].value();
 
     // return self
     self

@@ -46,6 +46,47 @@
 
 });
 
+// used for inits
+(
+~model.setSynthJustDependants = { arg self, synth, param, value;
+
+    // notify dependants
+    self.changed(\setSynth, ~model.synthsIndex[synth], param, value);
+
+});
+
+
+// set master synth param Controller function
+// this notifies individual dependants as well
+// via ~model.setSynth
+(
+~model.setSynthMaster = { arg self, param, value, whoChangedIt;
+
+    // set ALL synths both A and B
+    self.synths.do({|synth|
+
+        if (synth.notNil) {
+            self.setSynth(synth, param ++ \A, value);
+            self.setSynth(synth, param ++ \B, value);
+        }
+
+    });
+
+    // notify dependants MASTER
+    self.changed(\setSynthMaster, param, value, whoChangedIt);
+
+});
+
+// used for inits
+(
+~model.setMasterJustDependants = { arg self, param, value, whoChangedIt;
+
+    // notify dependants MASTER
+    self.changed(\setMaster, param, value, whoChangedIt);
+
+});
+
+
 (
 ~model.clearFlags = { arg self, ringer;
 
