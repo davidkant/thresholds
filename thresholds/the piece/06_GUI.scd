@@ -1081,21 +1081,23 @@ asymmetry
 
  vactrol photresistor innards
 
- doing
- * hook up number boxes
- * resize knobs to 40 and fix vertical alignment and add labels
+ model
  * do inits from model not hardwired (have to store in master)
- * freq label and conversion
- * freq knob draw while
-
- * add voltage divider?
- * draw smooth curve instead of a line
  * along those lines, spec for vactrolAttack (not A or B) or will that break simple GUI?
+
+ feature
+ * add voltage divider?
+ * instead of normalize y plot on log scale?
+
+ drawing improvments
+ * freq knob draw while
+ * draw smooth curve instead of a line
+
+ sc question
  * [..-1] syntax to remove last element?
 
 */
 
-(
 (
 ~photodesigner = {|model|
 
@@ -1129,7 +1131,15 @@ asymmetry
     self.win = Window.new('~photodesigner', Rect(900, 300, 345, 290))
     .front.alwaysOnTop_(true)
     .background_(Color.black)
-    .drawFunc_({Pen.strokeColor_(Color.white).width_(2).strokeRect(self.win.bounds.moveTo(0,0).insetBy(2,2))});
+    .drawFunc_({
+
+        // border
+        Pen.strokeColor_(Color.white).width_(2).strokeRect(self.win.bounds.moveTo(0,0).insetBy(2,2));
+
+        // vertical line between knobs and plots
+        Pen.moveTo(77@10); Pen.lineTo(77@280); Pen.strokeColor_(Color.grey).width_(1).smoothing_(false).stroke();
+
+    });
 
     // plots
     self.plot1.view = UserView(self.win, Rect(100,15,250,120)).background_(Color.clear);
@@ -1160,60 +1170,116 @@ asymmetry
         });
     }};
 
-    // knob formatting
+    // knob formatting (could clean this up a bit...)
     self.knobSize = 50;
     self.numBoxWidth = 50;
-    self.numBoxHeight = 20;
-    self.paddingBetweenKnobAndText = 5;
-    self.paddingBetweenTextAndKnob = 15;
-    self.paddingFromEdge = 15;
+    self.numBoxHeight = 16;
+    self.paddingBetweenLabelAndKnob = 4;
+    self.paddingBetweenKnobAndText = 0;
+    self.paddingBetweenTextAndKnob = 6;
+    self.paddingFromEdge = 20;
+    self.paddingFromTop = 10;
+    self.center = 40;
+
+    // attack label
+    self.attackLabel = StaticText(self.win, Rect(self.numBoxWidth.neg/2+self.center,self.paddingFromTop,self.numBoxWidth,self.numBoxHeight))
+    .string_('Attack')
+    .font_(Font.default.size_(12))
+    .stringColor_(Color.black)
+    .align_(\center)
+    .background_(Color.grey(0.3));
 
     // attack knob
-    self.attackKnob = Knob(self.win, Rect(self.paddingFromEdge,self.paddingFromEdge,self.knobSize,self.knobSize));
+    self.attackKnob = Knob(self.win, Rect(self.knobSize.neg/2+self.center,self.attackLabel.bounds.bottom+self.paddingBetweenLabelAndKnob,self.knobSize,self.knobSize));
     self.attackKnob.color_(self.attackKnob.color.put(1, Color.white).put(2, Color.black)).value_(\vactrolAttackA.asSpec.unmap(self.attack))
     .action_({|knob| model.setSynthMaster(\vactrolAttack, \vactrolAttackA.asSpec.map(knob.value), knob)});
 
-    // attack text
-    self.attackText = NumberBox(self.win, Rect(self.paddingFromEdge,self.attackKnob.bounds.bottom+self.paddingBetweenKnobAndText,self.numBoxWidth,self.numBoxHeight))
+/*    // attack text
+    self.attackText = NumberBox(self.win, Rect(self.numBoxWidth.neg/2+self.center,self.attackKnob.bounds.bottom+self.paddingBetweenKnobAndText,self.numBoxWidth,self.numBoxHeight))
     .value_(self.attack)
     .decimals_(3)
-    .font_(Font.default.size_(12))
+    .font_(Font.default.size_(11))
     .normalColor_(Color.white)
+    .align_(\center)
+    .background_(Color.clear);*/
+
+    // attack text
+    self.attackText = StaticText(self.win, Rect(self.numBoxWidth.neg/2+self.center,self.attackKnob.bounds.bottom+self.paddingBetweenKnobAndText,self.numBoxWidth,self.numBoxHeight))
+    .string_('0.003 sec')
+    // .decimals_(3)
+    .font_(Font.default.size_(10))
+    .stringColor_(Color.white)
     .align_(\right)
     .background_(Color.clear);
 
+     // decay label
+    self.decayLabel = StaticText(self.win, Rect(self.numBoxWidth.neg/2+self.center,self.attackText.bounds.bottom+self.paddingBetweenTextAndKnob,self.numBoxWidth,self.numBoxHeight))
+    .string_('Decay')
+    .font_(Font.default.size_(12))
+    .stringColor_(Color.black)
+    .align_(\center)
+    .background_(Color.grey(0.3));
+
     // decay knob
-    self.decayKnob = Knob(self.win, Rect(self.paddingFromEdge,self.attackText.bounds.bottom+self.paddingBetweenTextAndKnob,self.knobSize,self.knobSize));
+    self.decayKnob = Knob(self.win, Rect(self.knobSize.neg/2+self.center,self.decayLabel.bounds.bottom+self.paddingBetweenLabelAndKnob,self.knobSize,self.knobSize));
     self.decayKnob.color_(self.decayKnob.color.put(1, Color.white).put(2, Color.black)).value_(\vactrolDecayA.asSpec.unmap(self.decay))
     .action_({|knob| model.setSynthMaster(\vactrolDecay, \vactrolDecayA.asSpec.map(knob.value), knob)});
 
-    // decay text
-    self.decayText = NumberBox(self.win, Rect(self.paddingFromEdge,self.decayKnob.bounds.bottom+self.paddingBetweenKnobAndText,self.numBoxWidth,self.numBoxHeight))
+/*    // decay text
+    self.decayText = NumberBox(self.win, Rect(self.numBoxWidth.neg/2+self.center,self.decayKnob.bounds.bottom+self.paddingBetweenKnobAndText,self.numBoxWidth,self.numBoxHeight))
     .value_(self.decay)
     .decimals_(3)
-    .font_(Font.default.size_(12))
+    .font_(Font.default.size_(11))
     .normalColor_(Color.white)
+    .align_(\center)
+    .background_(Color.clear);*/
+
+    // decay text
+    self.decayText = StaticText(self.win, Rect(self.numBoxWidth.neg/2+self.center,self.decayKnob.bounds.bottom+self.paddingBetweenKnobAndText,self.numBoxWidth,self.numBoxHeight))
+    .string_('1.542 sec')
+    // .decimals_(3)
+    .font_(Font.default.size_(10))
+    .stringColor_(Color.white)
     .align_(\right)
     .background_(Color.clear);
+
+     // freq label
+    self.freqLabel = StaticText(self.win, Rect(self.numBoxWidth.neg/2+self.center,self.decayText.bounds.bottom+self.paddingBetweenTextAndKnob,self.numBoxWidth,self.numBoxHeight))
+    .string_('Freq')
+    .font_(Font.default.size_(12))
+    .stringColor_(Color.black)
+    .align_(\center)
+    .background_(Color.grey(0.3));
 
     // freq knob
-    self.freqKnob = Knob(self.win, Rect(self.paddingFromEdge,self.decayText.bounds.bottom+self.paddingBetweenTextAndKnob,self.knobSize,self.knobSize));
+    self.freqKnob = Knob(self.win, Rect(self.knobSize.neg/2+self.center,self.freqLabel.bounds.bottom+self.paddingBetweenLabelAndKnob,self.knobSize,self.knobSize));
     self.freqKnob.color_(self.freqKnob.color.put(1, Color.white).put(2, Color.black)).value_(0.5)
     .action_({|knob|
-        self.mu = (knob.value * 666).asInteger;
-        // self['updateData'].value();
-        if (self.updateDataRoutine.isNil.not) {self.updateDataRoutine.stop};
+        self.mu = (1 - knob.value * self.maxMu).asInteger.max(8);
+        // self['updateData'].value(); // continuously update while turning knob
+        if (self.updateDataRoutine.isNil.not) {self.updateDataRoutine.stop}; // stops update while turning knob
         self.updateDataRoutine = self['updateData'].value();
+        self.freqText.string_((44100.0/self.mu).asStringPrec(4) ++ ' Hz')
     });
 
-    // freq text
-    self.freqText = NumberBox(self.win, Rect(self.paddingFromEdge,self.freqKnob.bounds.bottom+self.paddingBetweenKnobAndText,self.numBoxWidth,self.numBoxHeight))
+/*    // freq text
+    self.freqText = NumberBox(self.win, Rect(self.numBoxWidth.neg/2+self.center,self.freqKnob.bounds.bottom+self.paddingBetweenKnobAndText,self.numBoxWidth,self.numBoxHeight))
     .value_(0.5)
     .decimals_(3)
-    .font_(Font.default.size_(12))
+    .font_(Font.default.size_(11))
     .normalColor_(Color.white)
+    .align_(\center)
+    .background_(Color.clear);*/
+
+    // freq text
+    self.freqText = StaticText(self.win, Rect(self.numBoxWidth.neg/2+self.center,self.freqKnob.bounds.bottom+self.paddingBetweenKnobAndText,self.numBoxWidth,self.numBoxHeight))
+    .string_('66.66 Hz')
+    // .decimals_(3)
+    .font_(Font.default.size_(10))
+    .stringColor_(Color.white)
     .align_(\right)
     .background_(Color.clear);
+
 
     // draw plot1
     self.plot1.view.drawFunc_({|view|
@@ -1335,7 +1401,8 @@ asymmetry
                 if (whoChangedIt != self.attackKnob) {self.attackKnob.value_(\vactrolAttackA.asSpec.unmap(value))};
 
                 // set text
-                if (whoChangedIt != self.attackText) {self.attackText.value_(value)};
+                // if (whoChangedIt != self.attackText) {self.attackText.value_(value)};
+                if (whoChangedIt != self.attackText) {self.attackText.string_(value.round(0.001).asString.padRight(2, ".").padRight(5, "0") ++ ' sec')};
 
                 // set internal values
                 self.attack = value;
@@ -1350,7 +1417,8 @@ asymmetry
                 if (whoChangedIt != self.decayKnob) {self.decayKnob.value_(\vactrolDecayA.asSpec.unmap(value))};
 
                 // set text
-                if (whoChangedIt != self.decayText) {self.decayText.value_(value)};
+                // if (whoChangedIt != self.decayText) {self.decayText.value_(value)};
+                if (whoChangedIt != self.decayText) {self.decayText.string_(value.round(0.001).asString.padRight(2, ".").padRight(5, "0") ++ ' sec')};
 
                 // set internal values
                 self.decay = value;
@@ -1375,6 +1443,3 @@ asymmetry
     self
 
 });
-
-~pd = ~photodesigner.value(~model)
-)
