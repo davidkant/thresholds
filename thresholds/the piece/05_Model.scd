@@ -32,6 +32,7 @@
 ~model.componentOutBusses = ~componentOutBusses;
 ~model.synthsIndex = Dictionary.newFrom([~model.synths, ~model.synths.collect({|e,i| i})].lace);
 ~model.flags = 3.collect({8.collect({0})});  // [ringer][channel]
+~model.masterParams = Dictionary.new;
 );
 
 // set synth param Controller function
@@ -72,6 +73,9 @@
 
     });
 
+    // store internal copy
+    self.masterParams.add((param ++ \Master).asSymbol -> value);
+
     // notify dependants MASTER
     self.changed(\setSynthMaster, param, value, whoChangedIt);
 
@@ -79,10 +83,13 @@
 
 // used for inits
 (
-~model.setMasterJustDependants = { arg self, param, value, whoChangedIt;
+~model.setSynthMasterJustDependants = { arg self, param, value, whoChangedIt;
+
+    // store internal copy
+    self.masterParams.add((param ++ \Master).asSymbol -> value);
 
     // notify dependants MASTER
-    self.changed(\setMaster, param, value, whoChangedIt);
+    self.changed(\setSynthMaster, param, value, whoChangedIt);
 
 });
 
