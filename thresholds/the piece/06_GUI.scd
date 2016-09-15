@@ -921,6 +921,7 @@ offset
 
 /* ~big knob -------------------------------------------------------------------
 
+model master inits n proper updating
 how do init for all 8? what updaer? => this needs it's own spot in the model...
 shape and offset / level for vatrol
 vatrol shape plot
@@ -1082,12 +1083,15 @@ asymmetry
  vactrol photresistor innards
 
  model
- * do inits from model not hardwired (have to store in master)
- * along those lines, spec for vactrolAttack (not A or B) or will that break simple GUI?
+ * along those lines, spec for vactrolAttack (not A or B)
 
  feature
  * add voltage divider?
  * instead of normalize y plot on log scale?
+ * set up as master make so can give it a channel adjust just that
+ * set test freq doesn't store to master and recall ... would be nice but
+   you'll need to use setSynthJustDependants or a new method for GUI params
+   to avoid sending synth.set message
 
  drawing improvments
  * freq knob draw while
@@ -1110,8 +1114,8 @@ asymmetry
     self.maxMu = 666;
     self.maxCycle = 13;
     self.mu = 200;
-    self.attack = 0.03;
-    self.decay = 1;
+    self.attack = 0.03; // sets model master to these defaults if no master data
+    self.decay = 1; // sets model master to these defaults if no master data
     self.cycle = 12;
 
     // plots
@@ -1121,7 +1125,7 @@ asymmetry
     // buffer
     self.dataBuff = Buffer.alloc(s, self.maxMu * self.maxCycle, 1);
 
-    // synthdef
+    // synthdef to make data
     SynthDef(\makeData, {|mu, attack = 0.1, decay = 1|
         var sig = LFPulse.ar(44100.0/mu);
         RecordBuf.ar(Vactrol.ar(sig, attack: attack, decay: decay, depth: 1), self.dataBuff, doneAction: 2, loop: 0);
@@ -1194,19 +1198,9 @@ asymmetry
     self.attackKnob.color_(self.attackKnob.color.put(1, Color.white).put(2, Color.black)).value_(\vactrolAttackA.asSpec.unmap(self.attack))
     .action_({|knob| model.setSynthMaster(\vactrolAttack, \vactrolAttackA.asSpec.map(knob.value), knob)});
 
-/*    // attack text
-    self.attackText = NumberBox(self.win, Rect(self.numBoxWidth.neg/2+self.center,self.attackKnob.bounds.bottom+self.paddingBetweenKnobAndText,self.numBoxWidth,self.numBoxHeight))
-    .value_(self.attack)
-    .decimals_(3)
-    .font_(Font.default.size_(11))
-    .normalColor_(Color.white)
-    .align_(\center)
-    .background_(Color.clear);*/
-
     // attack text
     self.attackText = StaticText(self.win, Rect(self.numBoxWidth.neg/2+self.center,self.attackKnob.bounds.bottom+self.paddingBetweenKnobAndText,self.numBoxWidth,self.numBoxHeight))
     .string_('0.003 sec')
-    // .decimals_(3)
     .font_(Font.default.size_(10))
     .stringColor_(Color.white)
     .align_(\right)
@@ -1225,19 +1219,9 @@ asymmetry
     self.decayKnob.color_(self.decayKnob.color.put(1, Color.white).put(2, Color.black)).value_(\vactrolDecayA.asSpec.unmap(self.decay))
     .action_({|knob| model.setSynthMaster(\vactrolDecay, \vactrolDecayA.asSpec.map(knob.value), knob)});
 
-/*    // decay text
-    self.decayText = NumberBox(self.win, Rect(self.numBoxWidth.neg/2+self.center,self.decayKnob.bounds.bottom+self.paddingBetweenKnobAndText,self.numBoxWidth,self.numBoxHeight))
-    .value_(self.decay)
-    .decimals_(3)
-    .font_(Font.default.size_(11))
-    .normalColor_(Color.white)
-    .align_(\center)
-    .background_(Color.clear);*/
-
     // decay text
     self.decayText = StaticText(self.win, Rect(self.numBoxWidth.neg/2+self.center,self.decayKnob.bounds.bottom+self.paddingBetweenKnobAndText,self.numBoxWidth,self.numBoxHeight))
     .string_('1.542 sec')
-    // .decimals_(3)
     .font_(Font.default.size_(10))
     .stringColor_(Color.white)
     .align_(\right)
@@ -1262,19 +1246,9 @@ asymmetry
         self.freqText.string_((44100.0/self.mu).asStringPrec(4) ++ ' Hz')
     });
 
-/*    // freq text
-    self.freqText = NumberBox(self.win, Rect(self.numBoxWidth.neg/2+self.center,self.freqKnob.bounds.bottom+self.paddingBetweenKnobAndText,self.numBoxWidth,self.numBoxHeight))
-    .value_(0.5)
-    .decimals_(3)
-    .font_(Font.default.size_(11))
-    .normalColor_(Color.white)
-    .align_(\center)
-    .background_(Color.clear);*/
-
     // freq text
     self.freqText = StaticText(self.win, Rect(self.numBoxWidth.neg/2+self.center,self.freqKnob.bounds.bottom+self.paddingBetweenKnobAndText,self.numBoxWidth,self.numBoxHeight))
     .string_('66.66 Hz')
-    // .decimals_(3)
     .font_(Font.default.size_(10))
     .stringColor_(Color.white)
     .align_(\right)
@@ -1436,7 +1410,17 @@ asymmetry
     // on close free buffer
     self.win.onClose_({model.removeDependant(self['updater']); self.dataBuff.close; self.dataBuff.free});
 
-    // inits
+    // init vactrolAttack
+    model.setSynthMasterJustDependants(\vactrolAttack,
+        if (model.masterParams[\vactrolAttackMaster].isNil.not) {model.masterParams[\vactrolAttackMaster]} {self.attack},
+        self);
+
+    // init vactrolDecay
+    model.setSynthMasterJustDependants(\vactrolDecay,
+        if (model.masterParams[\vactrolDecayMaster].isNil.not) {model.masterParams[\vactrolDecayMaster]} {self.attack},
+        self);
+
+    // init plots
     self['updateData'].value();
 
     // return self
