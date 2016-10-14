@@ -40,6 +40,7 @@
 ~vtrol = ~vactrolscope.value(~model);
 ~bg = ~bigknob.value(~model);
 ~pb = ~patchbay.value(~model);
+~pd = ~photodesigner.value(~model)
 
 // free ------------------------------------------------------------------------
 
