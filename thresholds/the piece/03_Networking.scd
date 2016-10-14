@@ -45,6 +45,7 @@
 ~scopeBusses = [~scopeBusA1B1, ~scopeBusC1D1, ~scopeBusA2B2, ~scopeBusC2D2];
 
 ~lfoScopeBusses = Bus.control(s, 8);
+~lfoLPScopeBusses = Bus.control(s, 8);
 
 ~vactrolScopeBusA1 = Bus.audio(s, 3);
 ~vactrolScopeBusB1 = Bus.audio(s, 3);
@@ -55,6 +56,17 @@
 ~vactrolScopeBusC2 = Bus.audio(s, 3);
 ~vactrolScopeBusD2 = Bus.audio(s, 3);
 ~vactrolScopeBusses = [~vactrolScopeBusA1, ~vactrolScopeBusB1, ~vactrolScopeBusC1, ~vactrolScopeBusD1, ~vactrolScopeBusA2, ~vactrolScopeBusB2, ~vactrolScopeBusC2, ~vactrolScopeBusD2];
+
+// gainstage busses
+~gainStageBusA1 = Bus.audio(s, 3);
+~gainStageBusB1 = Bus.audio(s, 3);
+~gainStageBusC1 = Bus.audio(s, 3);
+~gainStageBusD1 = Bus.audio(s, 3);
+~gainStageBusA2 = Bus.audio(s, 3);
+~gainStageBusB2 = Bus.audio(s, 3);
+~gainStageBusC2 = Bus.audio(s, 3);
+~gainStageBusD2 = Bus.audio(s, 3);
+~gainStageBusses = [~gainStageBusA1, ~gainStageBusB1, ~gainStageBusC1, ~gainStageBusD1, ~gainStageBusA2, ~gainStageBusB2, ~gainStageBusC2, ~gainStageBusD2];
 
 // patching bussses [signal, resistance]
 ~patchrNetA1toC1 = Bus.audio(s, 2);
