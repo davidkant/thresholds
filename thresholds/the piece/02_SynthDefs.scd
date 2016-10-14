@@ -73,6 +73,7 @@ z = SynthDef(\feedbackPair, {
 
     // scope busses
     scopeBus, lfoScopeBusA, lfoScopeBusB, vactrolScopeBusA, vactrolScopeBusB,
+    // gainStageBusA, gainStageBusB, lfoLPScopeBusA, lfoLPScopeBusB,
 
     otherIn,
 
@@ -126,10 +127,10 @@ z = SynthDef(\feedbackPair, {
     sigLP = LowPass741.ar(sigMixedIn, (1-lowPassPot)); //.scope(name:"lowpass");
 
     // [2] lfo
-    lfoSigA = LFOsc555Impulse.ar(lfoPotA, cswitch: lfoCapSwitchA);
+    lfoSigA = LFOsc555.ar(lfoPotA, cswitch: lfoCapSwitchA);
     lfoSigLPA = LowPass741.ar(lfoSigA, (1-lfoLowPassPotA));
 
-    lfoSigB = LFOsc555Impulse.ar(lfoPotB, cswitch: lfoCapSwitchB);
+    lfoSigB = LFOsc555.ar(lfoPotB, cswitch: lfoCapSwitchB);
     lfoSigLPB = LowPass741.ar(lfoSigB, (1-lfoLowPassPotB));
 
     // [3] mixer
@@ -189,11 +190,18 @@ z = SynthDef(\feedbackPair, {
     // [*] lfo scope
     Out.kr(lfoScopeBusA, [lfoSigA]);
     Out.kr(lfoScopeBusB, [lfoSigB]);
+    // Out.kr(lfoLPScopeBusA, [lfoSigLPA]);
+    // Out.kr(lfoLPScopeBusB, [lfoSigLPB]);
 
     // [*] vactrol scope: [post-hysteresis, internal state, led]
     Out.ar(vactrolScopeBusA, [sigVtrolA[0]/220, sigVtrolA[1], sigVtrolA[2]]);
     Out.ar(vactrolScopeBusB, [sigVtrolB[0]/220, sigVtrolB[1], sigVtrolB[2]]);
 
+    // [*] remaining node outputs
+    // Out.ar(gainStageBusA, [sigMix2A, sigPreAmpA, sigPowAmpA]);
+    // Out.ar(gainStageBusB, [sigMix2B, sigPreAmpB, sigPowAmpB]);
+
+    // [*] all outputs in one
     // Out.ar(scopeBusA, [lfoSigA, sigMixedIn, sigLP, sigMix2A, sigPreAmpA, sigPowAmpA, sigTformA/10, sigVtrolA[0]/109, sigVtrolA[1], sigVtrolA[2], koscA[0], koscA[1], koscA[2]]);
     // Out.ar(scopeBusB, [lfoSigB, sigMixedIn, sigLP, sigMix2B, sigPreAmpB, sigPowAmpB, sigTformB/10, sigVtrolB[0]/109, sigVtrolB[1], sigVtrolB[2], koscB[0], koscB[1], koscB[2]]);
 
