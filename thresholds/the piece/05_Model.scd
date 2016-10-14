@@ -28,7 +28,9 @@
 ~model.mixedOutBusses = ~mixedOutBusses;
 ~model.scopeBusses = ~scopeBusses;
 ~model.lfoScopeBusses = ~lfoScopeBusses;
+~model.lfoLPScopeBusses = ~lfoLPScopeBusses;
 ~model.vactrolScopeBusses = ~vactrolScopeBusses;
+~model.gainStageBusses = ~gainStageBusses;
 ~model.componentOutBusses = ~componentOutBusses;
 ~model.synthsIndex = Dictionary.newFrom([~model.synths, ~model.synths.collect({|e,i| i})].lace);
 ~model.flags = 3.collect({8.collect({0})});  // [ringer][channel]
