@@ -7,6 +7,8 @@
 
 */
 
+"04_Synths!".postln;
+
 (
 ~a1b1 = Synth(\feedbackPair, [otherIn: ~otherInA1, mainOutBusA: ~mixedOutA1, mainOutBusB: ~mixedOutB1,
     componentOutBusA: ~componentOutA1, componentOutBusB: ~componentOutB1, scopeBus: ~scopeBusA1B1,

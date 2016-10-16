@@ -13,6 +13,8 @@
 
 */
 
+"02_SynthDefs!".postln;
+
 // control spec
 (
 /* --- GLOBAL --- */

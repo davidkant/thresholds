@@ -24,6 +24,8 @@
 
 */
 
+"06_GUI!".postln;
+
 (
 ~quickGUI = {|synth, synthDef, winlabelname|
 
@@ -827,6 +829,8 @@ offset
  dynamicall and on load check for it. that's nice. do this later.
 
  -> have internal state variable that is separate from button val
+
+ -> need to keep track of the synth somewhere so you can free it after close
 
 */
 (

@@ -4,6 +4,8 @@
 
 */
 
+"07_MidiControl!".postln;
+
 MIDIIn.connectAll;
 
 (
