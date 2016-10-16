@@ -4,14 +4,14 @@
 
 */
 
-"01_Startup!".postln;
+"01: Starting Server...".postln;
 
 (
 o = Server.local.options;
 // o.numOutputBusChannels = 12; // need this for multichannel output
 o.sampleRate = 44100;
 o.blockSize = 64;
-s.boot;
+s.waitForBoot({"-> BOOT SUCCESS!!!".postln});
 // o.numAudioBusChannels_(128);
 // s.meter;
 // o.blockSize.postln;
