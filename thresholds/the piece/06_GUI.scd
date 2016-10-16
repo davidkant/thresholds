@@ -1108,6 +1108,18 @@ asymmetry
 
 */
 
+/* ----- SynthDefs ----- */
+(
+
+// synthdef to make data
+SynthDef(\makeData, {|dataBuff, mu, attack = 0.1, decay = 1|
+    var sig = LFPulse.ar(44100.0/mu);
+    RecordBuf.ar(Vactrol.ar(sig, attack: attack, decay: decay, depth: 1), dataBuff, doneAction: 2, loop: 0);
+}).add;
+
+);
+
+/* ----- GUI ----- */
 (
 ~photoDesigner = {|model|
 
@@ -1130,12 +1142,6 @@ asymmetry
 
     // buffer
     self.dataBuff = Buffer.alloc(s, self.maxMu * self.maxCycle, 1);
-
-    // synthdef to make data
-    SynthDef(\makeData, {|mu, attack = 0.1, decay = 1|
-        var sig = LFPulse.ar(44100.0/mu);
-        RecordBuf.ar(Vactrol.ar(sig, attack: attack, decay: decay, depth: 1), self.dataBuff, doneAction: 2, loop: 0);
-    }).add;
 
     // window
     self.win = Window.new('~photoDesigner', Rect(900, 300, 345, 290))
@@ -1164,7 +1170,7 @@ asymmetry
         mu = self.mu;
 
         // make data
-        Synth(\makeData, [\mu, self.mu, \attack, self.attack, \decay, self.decay]).waitForFree;
+        Synth(\makeData, [\dataBuff, self.dataBuff, \mu, self.mu, \attack, self.attack, \decay, self.decay]).waitForFree;
 
         // get data for plot2
         self.dataBuff.getn((cycle - 1.5 * mu).floor, self.mu, {|data|
@@ -1454,6 +1460,16 @@ asymmetry
 
 */
 
+
+/* ----- SynthDefs ----- */
+(
+
+// synth to convert vactrol led to control rate and peak picking (currently off)
+SynthDef(\vactrolLED, { |inBus, outBus| Out.kr(outBus, LagUD.kr(A2K.kr(InFeedback.ar(inBus)), 0, 0)) }).add;
+
+);
+
+/* ----- GUI ----- */
 (
 ~pairiScope = { |model|
 
@@ -1523,9 +1539,6 @@ asymmetry
 
     // create contiguous busses for vactrol animation
     self.vactrolLedBusses = Bus.control(s, 2);
-
-    // synth to convert vactrol led to control rate and peak picking (currently off)
-    SynthDef(\vactrolLED, { |inBus, outBus| Out.kr(outBus, LagUD.kr(A2K.kr(InFeedback.ar(inBus)), 0, 0)) }).add;
 
     // vactrol A
     self.vactrolA = ();
