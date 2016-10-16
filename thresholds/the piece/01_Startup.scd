@@ -4,6 +4,8 @@
 
 */
 
+"01_Startup!".postln;
+
 (
 o = Server.local.options;
 // o.numOutputBusChannels = 12; // need this for multichannel output
