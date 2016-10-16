@@ -1431,3 +1431,178 @@ asymmetry
     self
 
 });
+
+/* ~pairiScope -----------------------------------------------------------------
+
+ feedback pair diagram come to life!
+
+ * buss system needs a major refactor to store references to each synth pair's
+ busses in a pair object rather than grabbing from a master bus list
+
+ THINGS that may BREAK in the future
+ * assumes mixedOutBusses are allocated contiguously
+
+ TODO
+ -> get the SYNTHDEF out of the function so no ERROR: not found
+ -> any pair, hardwired to first pair right now
+ -> mess of busses. hacked the extra busses together for this. bus needs cleanup
+ -> resize
+ -> zoom indicators, zoom control
+ -> able to turn knobs
+ -> mouse over feedback
+
+*/
+
+(
+~pairiScope = { |model|
+
+    var self, node;
+
+    self = ();
+
+    // formatting
+    self.scale = 2;
+    self.scopeSize = 84;
+
+    // image
+    self.schematic = Image.open(model.dir ++ "img/network pair schematic inverted labels.png");
+
+    // window
+    self.win = Window.new('~pairiScope', Rect(380, 180, self.schematic.bounds.width/self.scale, self.schematic.bounds.height/self.scale))
+    .front.alwaysOnTop_(true)
+    .background_(Color.black)
+    .drawFunc_({ Pen.strokeColor_(Color.white).width_(2).strokeRect(self.win.bounds.moveTo(0,0).insetBy(2,2));});
+
+    // schemtaic container
+    self.container = UserView(self.win, self.win.bounds.moveTo(0,0).insetBy(2,2))
+    .drawFunc_({self.schematic.drawInRect(self.container.bounds, self.schematic.bounds)});
+
+    // main output bus pair
+    self.mixedOutBussPair = Bus.new('audio', 4+0, numChannels:2);
+
+    /* ----- nodes ----- */
+
+    // function to create node scopes
+    self.nodeFactory = {|self, bus, loc, zoom, color|
+
+        // create node
+        var node = ();
+
+        // oscilloscope
+        node.scopeContainer = CompositeView(self.win, Rect(loc.x, loc.y, self.scopeSize, self.scopeSize)).resize_(5);
+        node.scope = Stethoscope.new(bus.server, bus.numChannels, bus.index, view: node.scopeContainer, zoom: 4, rate:bus.rate);
+        node.scope.yZoom_(zoom);
+        node.scope.style_(bus.numChannels);
+        node.scope.view.bounds_(Rect(-2, -28, node.scopeContainer.bounds.width+21, node.scopeContainer.bounds.height+47));
+        node.scope.scopeView.waveColors_([color]);
+        node.scope.scopeView.background_(Color.black);
+        node.scope.scopeView.fill_(true);
+
+        // return node
+        node
+    };
+
+    // add nodes
+    self.lowPass = self.nodeFactory( model.scopeBusses[0].subBus(1),          140@95,  20, Gradient(Color.cyan, Color.magenta).at(1/5));
+    self.mixer   = self.nodeFactory( self.mixedOutBussPair,                   577@266, 1.4,  Color.cyan.blend(Color.black, 0.3));
+    self.mixerA  = self.nodeFactory( model.gainStageBusses[0].subBus(0),      289@95,  20, Gradient(Color.cyan, Color.magenta).at(2/5));
+    self.preAmpA = self.nodeFactory( model.gainStageBusses[0].subBus(1),      438@95,  20, Gradient(Color.cyan, Color.magenta).at(3/5));
+    self.powAmpA = self.nodeFactory( model.gainStageBusses[0].subBus(2),      577@95,  2,  Gradient(Color.cyan, Color.magenta).at(4/5));
+    self.lfoA    = self.nodeFactory( model.lfoScopeBusses.subBus(0),          140@266, 2,  Color(0.5,0,0));
+    self.lfoLPA  = self.nodeFactory( model.lfoLPScopeBusses.subBus(0),        289@266, 2,  Color(0.5,0,0));
+    self.koscA   = self.nodeFactory( model.componentOutBusses[0].subBus(0,2), 438@266, 2,  Color.cyan.blend(Color.black, 0.3));
+    self.mixerB  = self.nodeFactory( model.gainStageBusses[1].subBus(0),      215@404, 20, Gradient(Color.cyan, Color.magenta).at(2/5));
+    self.preAmpB = self.nodeFactory( model.gainStageBusses[1].subBus(1),      438@404, 20, Gradient(Color.cyan, Color.magenta).at(3/5));
+    self.powAmpB = self.nodeFactory( model.gainStageBusses[1].subBus(2),      577@404, 2,  Gradient(Color.cyan, Color.magenta).at(4/5));
+    self.lfoB    = self.nodeFactory( model.lfoScopeBusses.subBus(1),          140@574, 2,  Color(0.5,0,0));
+    self.lfoLPB  = self.nodeFactory( model.lfoLPScopeBusses.subBus(1),        289@574, 2,  Color(0.5,0,0));
+    self.koscB   = self.nodeFactory( model.componentOutBusses[1].subBus(0,2), 438@574, 2,  Color.cyan.blend(Color.black, 0.3));
+
+    /* ----- vactrols ----- */
+
+    // create contiguous busses for vactrol animation
+    self.vactrolLedBusses = Bus.control(s, 2);
+
+    // synth to convert vactrol led to control rate and peak picking (currently off)
+    SynthDef(\vactrolLED, { |inBus, outBus| Out.kr(outBus, LagUD.kr(A2K.kr(InFeedback.ar(inBus)), 0, 0)) }).add;
+
+    // vactrol A
+    self.vactrolA = ();
+    self.vactrolA.ledBus = self.vactrolLedBusses.subBus(0);
+    self.vactrolA.color = Color.magenta;
+    self.vactrolA.val = 0.0;
+    self.vactrolA.view = UserView(self.win, Rect(504, 192, 92, 61))
+    .drawFunc_({|view|
+        Pen.fillColor_(self.vactrolA.color.alpha_(self.vactrolA.val/1.7)); // scale down so little less intense on the eyes
+        Pen.fillOval(view.bounds.moveToPoint(0@0));
+    });
+
+    // launch vactrol led synth
+    self.vactrolA.ledSynth = Synth(\vactrolLED, [\inBus, model.vactrolScopeBusses[0].subBus(2), \outBus, self.vactrolA.ledBus]);
+
+    // vactrol B
+    self.vactrolB = ();
+    self.vactrolB.ledBus = self.vactrolLedBusses.subBus(1);
+    self.vactrolB.color = Color.magenta;
+    self.vactrolB.val = 0.5;
+    self.vactrolB.view = UserView(self.win, Rect(493, 500, 92, 61))
+    .drawFunc_({|view|
+        Pen.fillColor_(self.vactrolB.color.alpha_(self.vactrolB.val/1.7)); // scale down so little less intense on the eyes
+        Pen.fillOval(view.bounds.moveToPoint(0@0));
+    });
+
+    // launch vactrol led synth
+    self.vactrolB.ledSynth = Synth(\vactrolLED, [\inBus, model.vactrolScopeBusses[1].subBus(2), \outBus, self.vactrolB.ledBus]);
+
+    // vactrol LED animation function
+    self.updateVactrolLEDs = {
+
+        self.vactrolLedBusses.get({|vals|
+
+            // vactrol A
+            if (vals[0] != self.vactrolA.val, {
+
+                // update val
+                self.vactrolA.val = vals[0];
+
+                // refresh
+                {self.vactrolA.view.refresh()}.defer;
+
+            });
+
+            // vactrol B
+            if (vals[1] != self.vactrolB.val, {
+
+                // update val
+                self.vactrolB.val = vals[1];
+
+                // refresh
+                {self.vactrolB.view.refresh()}.defer;
+
+            });
+        });
+    };
+
+    // fork animation routine @60Hz on AppClock
+    // self.animationRoutine = {loop{self['updateVactrolLEDs'].value(); 0.016666666666667.yield;}}.fork(AppClock);
+    self.animationRoutine = {loop{self['updateVactrolLEDs'].value(); 0.033333333333333.yield;}}.fork(AppClock);
+
+    // on close
+    self.win.onClose_({
+        // stop animation routine
+        self.animationRoutine.stop;
+        // free vactrol LED synths
+        self.vactrolA.ledSynth.free;
+        self.vactrolB.ledSynth.free;
+        // free vactrol LED busses
+        self.vactrolLedBusses.free;
+        // free mixedOutBussPair bus
+        self.mixedOutBussPair.free;
+        // free image
+        self.schematic.free;
+    });
+
+    // return self
+    self
+
+});
