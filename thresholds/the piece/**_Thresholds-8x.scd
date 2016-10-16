@@ -33,6 +33,7 @@
 ~quick3 = ~quickGUI.value(~a2b2,z,"A2B2");
 ~quick4 = ~quickGUI.value(~c2d2,z,"C2D2");
 
+~pairo = ~pairiScope.value(~model);
 ~octo = ~octoScope.value(~model);
 ~lp = ~lowPassScope.value(~model);
 ~atr2 = ~attractors.value(~model, style:2);
