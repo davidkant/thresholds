@@ -36,12 +36,12 @@
 ~pairo = ~pairiScope.value(~model);
 ~octo = ~octoScope.value(~model);
 ~lp = ~lowPassScope.value(~model);
-~atr2 = ~attractors.value(~model, style:2);
-~lf = ~lfoscope.value(~model);
-~vtrol = ~vactrolscope.value(~model);
-~bg = ~bigknob.value(~model);
+~atr = ~attractors.value(~model, style:2);
+~lf = ~lfoScope.value(~model);
+~hyst = ~hysteresisMonitor.value(~model);
+~bg = ~bigKnob.value(~model);
 ~pb = ~patchbay.value(~model);
-~pd = ~photodesigner.value(~model)
+~pd = ~photoDesigner.value(~model)
 
 // free ------------------------------------------------------------------------
 

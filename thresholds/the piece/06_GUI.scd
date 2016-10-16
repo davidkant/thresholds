@@ -98,30 +98,32 @@
 (
 ~octoScope = {|model|
 
-    var myOctoscope = ();
+    var self = ();
 
     // settings
-    myOctoscope.highlighterColors = [Color.magenta, Color.cyan, Color.yellow];
+    self.highlighterColors = [Color.magenta, Color.cyan, Color.yellow];
 
     // window
-    myOctoscope.win = Window.new('Octoscope', Rect(100,500,1225,210)).front.alwaysOnTop_(true);
-    myOctoscope.win.background_(Color.black);
+    self.win = Window.new('~octoScope', Rect(100,500,1225,210))
+    .front.alwaysOnTop_(true)
+    .background_(Color.black)
+    .drawFunc_({ Pen.strokeColor_(Color.white).width_(2).strokeRect(self.win.bounds.moveTo(0,0).insetBy(2,2));});
 
     // init channels
-    myOctoscope.channels = 8.collect({()});
+    self.channels = 8.collect({()});
 
     // loop through all mixedOutBusses
     model.mixedOutBusses.do({|bus, i|
 
         // local reference
-        var channel = myOctoscope.channels[i];
+        var channel = self.channels[i];
 
         // synth and which of pair
         channel.msynth = model.synths[i.div(2)];
         channel.aorb = [\A,\B][i%2];
 
         // channel container
-        channel.container = CompositeView(myOctoscope.win, Rect(i*150+12, 10, 149, 500));
+        channel.container = CompositeView(self.win, Rect(i*150+12, 10, 149, 500));
 
         // oscilloscope
         channel.scopeView = CompositeView(channel.container, Rect(0, 0, channel.container.bounds.width, 85));
@@ -164,7 +166,7 @@
         // highlighters
         channel.highlighters = 3.collect({ |j|
             View.new(channel.container, Rect(channel.container.bounds.width-(j+1*6)-1, 2, 5, 5))
-                .background_(myOctoscope.highlighterColors[j]
+                .background_(self.highlighterColors[j]
                 .alpha_(0.5 * ~model.flags[j][i]))
         });
 
@@ -187,7 +189,7 @@
     });
 
     // updater
-    myOctoscope.updater = { arg model, whatChanged ... args;
+    self.updater = { arg model, whatChanged ... args;
 
         if (whatChanged == \setSynth) {
 
@@ -198,22 +200,22 @@
 
             // update GUI
             if (param == \koscRA, {
-                channel = myOctoscope.channels[synthIndex*2 + 0];
+                channel = self.channels[synthIndex*2 + 0];
                 channel.rSlider.value_(\koscRA.asSpec.unmap(value));
                 channel.rNumber.value_(value);
             });
             if (param == \koscRB, {
-                channel = myOctoscope.channels[synthIndex*2 + 1];
+                channel = self.channels[synthIndex*2 + 1];
                 channel.rSlider.value_(\koscRA.asSpec.unmap(value));
                 channel.rNumber.value_(value);
             });
             if (param == \preAmpPotA, {
-                channel = myOctoscope.channels[synthIndex*2 + 0];
+                channel = self.channels[synthIndex*2 + 0];
                 channel.preAmpSlider.value_(\preAmpPotA.asSpec.unmap(value));
                 channel.preAmpNumber.value_(value);
             });
             if (param == \preAmpPotB, {
-                channel = myOctoscope.channels[synthIndex*2 + 1];
+                channel = self.channels[synthIndex*2 + 1];
                 channel.preAmpSlider.value_(\preAmpPotB.asSpec.unmap(value));
                 channel.preAmpNumber.value_(value);
             });
@@ -227,8 +229,8 @@
             ringer = args[0]; channel = args[1];
 
             // update channel highlighter
-            myOctoscope.channels[channel].highlighters[ringer]
-                .background_(myOctoscope.highlighterColors[ringer]
+            self.channels[channel].highlighters[ringer]
+                .background_(self.highlighterColors[ringer]
                 .alpha_(1.0 * ~model.flags[ringer][channel]));
         };
 
@@ -240,8 +242,8 @@
             ringer = args[0];
 
             // clear all channel highlighters
-            myOctoscope.channels.do({ |channel| channel.highlighters[ringer]
-                .background_(myOctoscope.highlighterColors[ringer]
+            self.channels.do({ |channel| channel.highlighters[ringer]
+                .background_(self.highlighterColors[ringer]
                 .alpha_(0))
             });
         };
@@ -249,13 +251,13 @@
     };
 
     // add octoscope updater function to model dependant list
-    model.addDependant(myOctoscope['updater']);
+    model.addDependant(self['updater']);
 
     // remove updater function on window close
-    myOctoscope.win.onClose_({model.removeDependant(myOctoscope['updater'])});
+    self.win.onClose_({model.removeDependant(self['updater'])});
 
     // return osctoscope
-    myOctoscope
+    self
 
 });
 
@@ -277,7 +279,7 @@
     self.knobSize = 50;
 
     // window
-    self.win = Window.new('LowPass', Rect(100,500,425,138))
+    self.win = Window.new('~lowPassScope', Rect(100,500,425,138))
     .front.alwaysOnTop_(true)
     .background_(Color.black);
     self.win.drawFunc_({Pen.strokeColor_(Color.white).width_(2).strokeRect(self.win.bounds.moveTo(0,0).insetBy(2,2))});
@@ -405,7 +407,7 @@
     self.paddingWithinPair = 1;
 
     // window
-    self.win = Window.new('Attractors', Rect(
+    self.win = Window.new('~attractors', Rect(
         100,
         500,
         self.scopeSize*4+self.paddingFromEdge+self.paddingFromEdge+self.paddingCeneterColumn,
@@ -474,7 +476,7 @@
 
 */
 (
-~lfoscope = {|model|
+~lfoScope = {|model|
 
     var self = ();
 
@@ -484,7 +486,7 @@
     self.blinkerSize = 10;
 
     // window
-    self.win = Window.new('LFOs', Rect(100, 500, 926, 150))
+    self.win = Window.new('~lfoScope', Rect(100, 500, 926, 150))
     .front.alwaysOnTop_(true)
     .background_(Color.black);
 
@@ -691,7 +693,7 @@ offset
 */
 
 (
-~vactrolscope = {|model|
+~hysteresisMonitor = {|model|
 
     var self = ();
 
@@ -702,7 +704,7 @@ offset
     self.paddingFromEdge = 10;
 
     // window
-    self.win = Window.new('~vactrolscope', Rect(100, 500, (self.channelWidth*8)+(self.paddingBetween*7)+(self.paddingFromEdge*2), self.channelHeight+self.paddingFromEdge+self.paddingFromEdge))
+    self.win = Window.new('~hysteresisMonitor', Rect(100, 500, (self.channelWidth*8)+(self.paddingBetween*7)+(self.paddingFromEdge*2), self.channelHeight+self.paddingFromEdge+self.paddingFromEdge))
     .front.alwaysOnTop_(true)
     .background_(Color.black);
     self.win.drawFunc_({Pen.strokeColor_(Color.white).width_(2).strokeRect(self.win.bounds.moveTo(0,0).insetBy(2,2))});
@@ -935,7 +937,7 @@ asymmetry
 */
 
 (
-~bigknob = {|model|
+~bigKnob = {|model|
 
     var self = ();
 
@@ -953,7 +955,7 @@ asymmetry
     // self.ticks = ((1..10) * 1) ++ [20,30,40,50] ++ ((1..10) * 60) ++ [600*2, 600*3, 600*4, 600*5] ++ ((1..10) * 60*60)
 
     // window
-    self.win = Window.new('bigknob', Rect(100, 500, 600, 400))
+    self.win = Window.new('bigKnob', Rect(100, 500, 600, 400))
     .front.alwaysOnTop_(true)
     .background_(Color.black)
     .drawFunc_({Pen.strokeColor_(Color.white).width_(2).strokeRect(self.win.bounds.moveTo(0,0).insetBy(2,2))});
@@ -1107,7 +1109,7 @@ asymmetry
 */
 
 (
-~photodesigner = {|model|
+~photoDesigner = {|model|
 
     var self = ();
 
@@ -1136,7 +1138,7 @@ asymmetry
     }).add;
 
     // window
-    self.win = Window.new('~photodesigner', Rect(900, 300, 345, 290))
+    self.win = Window.new('~photoDesigner', Rect(900, 300, 345, 290))
     .front.alwaysOnTop_(true)
     .background_(Color.black)
     .drawFunc_({
@@ -1257,7 +1259,6 @@ asymmetry
     .stringColor_(Color.white)
     .align_(\right)
     .background_(Color.clear);
-
 
     // draw plot1
     self.plot1.view.drawFunc_({|view|
