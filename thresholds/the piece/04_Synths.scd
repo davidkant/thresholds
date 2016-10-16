@@ -7,7 +7,7 @@
 
 */
 
-"04_Synths!".postln;
+"04: Launching Synths...".postln;
 
 (
 ~a1b1 = Synth(\feedbackPair, [otherIn: ~otherInA1, mainOutBusA: ~mixedOutA1, mainOutBusB: ~mixedOutB1,
@@ -57,3 +57,6 @@
 );
 
 ~synths =  [~a1b1, ~c1d1, ~a2b2, ~c2d2];
+
+// return
+"++++"

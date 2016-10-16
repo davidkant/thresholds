@@ -13,7 +13,7 @@
 
 */
 
-"02_SynthDefs!".postln;
+"02: Adding SynthDefs...".postln;
 
 // control spec
 (
@@ -209,3 +209,6 @@ z = SynthDef(\feedbackPair, {
 
 }).add
 );
+
+// return
+"++"

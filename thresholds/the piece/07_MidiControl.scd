@@ -4,7 +4,7 @@
 
 */
 
-"07_MidiControl!".postln;
+"07: Setting up MIDI...".postln;
 
 MIDIIn.connectAll;
 
@@ -29,3 +29,6 @@ MIDIFunc.cc({|val, num, chan, uid| {~model.setSynth(~a2b2, \preAmpPotB, (val/127
 MIDIFunc.cc({|val, num, chan, uid| {~model.setSynth(~c2d2, \preAmpPotA, (val/127))}.defer}, 6, 0);
 MIDIFunc.cc({|val, num, chan, uid| {~model.setSynth(~c2d2, \preAmpPotB, (val/127))}.defer}, 7, 0);
 );
+
+// return
+"+++++++"

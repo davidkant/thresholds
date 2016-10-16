@@ -21,7 +21,7 @@
 (~dir ++ "04_Synths.scd").load;              // Launch the Synths
 (~dir ++ "05_Model.scd").load;               // MVC Model Setup
 (~dir ++ "06_GUI.scd").load;                 // Load GUIs
-(~dir ++ "07_MidiControl.scd").load;         // Some Midi Control
+// (~dir ++ "07_MidiControl.scd").load;         // Some Midi Control
 (~dir ++ "09_PostProcessing-8x2.scd").load;  // KOSC -> DAC via RingMods
 (~dir ++ "99_Ringers.scd").load;             // White Walkers --- oh my!
 (~dir ++ "99_Walkers.scd").load;             // White Walkers --- oh my!
@@ -39,9 +39,9 @@
 ~atr = ~attractors.value(~model, style:2);
 ~lf = ~lfoScope.value(~model);
 ~hyst = ~hysteresisMonitor.value(~model);
+~pd = ~photoDesigner.value(~model)
 ~bg = ~bigKnob.value(~model);
 ~pb = ~patchbay.value(~model);
-~pd = ~photoDesigner.value(~model)
 
 // free ------------------------------------------------------------------------
 

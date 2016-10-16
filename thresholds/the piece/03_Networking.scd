@@ -7,7 +7,7 @@
 
 */
 
-"03_Networking!".postln;
+"03: Creating Network Busses...".postln;
 
 (
 
@@ -97,4 +97,7 @@
 ~rNetOutC2 = ~patchrNetC2toA2;
 ~rNetInD2 = ~patchrNetB2toD2;
 ~rNetOutD2 = ~patchrNetD2toB2;
-)
+);
+
+// return
+"+++"

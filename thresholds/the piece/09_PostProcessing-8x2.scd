@@ -8,7 +8,7 @@
 
 */
 
-"09_PostProcessing-8x2!".postln;
+"09: Loading Post-Processing for 8x2...".postln;
 
 (
 SynthDef(\ringer, {arg inBusA, inBusB, outPos, atk=0.0, rel=0.0, amp=0.05,
@@ -52,3 +52,6 @@ SynthDef(\PairRinger, {arg inBusA, inBusB, outBus = 0, outPos = 0;
 
 }).add;
 );
+
+// return
+"+++++++++"
