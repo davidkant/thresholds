@@ -1544,7 +1544,7 @@ asymmetry
     self.vactrolB = ();
     self.vactrolB.ledBus = self.vactrolLedBusses.subBus(1);
     self.vactrolB.color = Color.magenta;
-    self.vactrolB.val = 0.5;
+    self.vactrolB.val = 0.0;
     self.vactrolB.view = UserView(self.win, Rect(493, 500, 92, 61))
     .drawFunc_({|view|
         Pen.fillColor_(self.vactrolB.color.alpha_(self.vactrolB.val/1.7)); // scale down so little less intense on the eyes
