@@ -6,6 +6,9 @@
  * some consistent formatting like and padding border?
  * this synth index stuff ...
 
+ RE-DESIGN
+ -> abstract out functions to reuse like makeScope
+
  TODO
  * faster response have an update param function that gets called directly by
    knob movement and keep track in the responder who called it so don't re-up
@@ -1614,6 +1617,165 @@ SynthDef(\vactrolLED, { |inBus, outBus| Out.kr(outBus, LagUD.kr(A2K.kr(InFeedbac
         self.mixedOutBussPair.free;
         // free image
         self.schematic.free;
+    });
+
+    // return self
+    self
+
+});
+
+/* ~hyperspace -----------------------------------------------------------------
+
+ the name says it all... plot hyperchaotic attractors
+
+ TODO
+ -> do padding 40,40 as percent to help scale
+ -> quick fix: currently hardwired for first pair for now. do it for real
+
+*/
+
+(
+~hyperspace = {|model, oscs=\all, scale=14|
+
+    var self = ();
+
+    // formatting
+    self.aspect = 2/5*1.05;
+    self.smallScopeSize = 2/3;
+    self.largeScopeSize = 1;
+
+    // window
+    self.win = Window.new('~hyperspace', Rect(100, 330, scale*100+3, self.aspect*scale*100+3))
+    .front.alwaysOnTop_(true)
+    .background_(Color.black);
+    self.win.drawFunc_({Pen.strokeColor_(Color.white).width_(2).strokeRect(self.win.bounds.moveTo(0,0).insetBy(2,2))});
+
+    // helper to make scope
+    self.makeScope = {|self, container, rect, bus, channels=2, xZoom=4, yZoom=1, style=2, colors|
+
+        var scope = ();
+
+        // container
+        scope.container = CompositeView(container, rect);
+
+        // scope
+        scope.scope = Stethoscope.new(bus.server, channels, bus.index, view: scope.container, zoom: xZoom);
+        scope.scope.yZoom_(yZoom);
+        scope.scope.style_(style);
+        scope.scope.view.bounds_(Rect(-2, -28, scope.container.bounds.width+21, scope.container.bounds.height+47));
+        scope.scope.scopeView.waveColors_(colors);
+        scope.scope.scopeView.background_(Color.black);
+        scope.scope.scopeView.fill_(true);
+
+        // border
+        scope.border = UserView(scope.container, scope.container.bounds.moveTo(0,0))
+        .background_(Color.clear)
+        .drawFunc_({|view| Pen.strokeColor_(Color.white).width_(1).smoothing_(false).strokeRect(view.bounds.moveTo(0,0).resizeBy(-1,-1)) }); // cuts of right & bottom edges otherwise...
+
+        // return
+        scope
+    };
+
+    // channels container
+    self.channelsContainer = CompositeView(self.win, self.win.bounds.moveTo(0,0).insetBy(2,2));
+
+    // channel factory
+    self.channelFactory = {|self, bus1, bus2, bus3, rect, color1, color2, zoom1=2, zoom2=1.1|
+
+        // local reference
+        var channel = ();
+
+        // formatting
+        channel.smallScopeSize = self.smallScopeSize * rect.bounds.height;
+        channel.largeScopeSize = self.largeScopeSize * rect.bounds.height;
+
+        // channel container
+        channel.container = UserView(self.channelsContainer, rect).background_(Color.black);
+
+        // scope rects
+        channel.scopeRectA = Rect(0, channel.container.bounds.height - channel.smallScopeSize / 2, channel.smallScopeSize, channel.smallScopeSize);  // center vertically
+        channel.scopeRectB = Rect(channel.container.bounds.width - channel.smallScopeSize - 0, channel.container.bounds.height - channel.smallScopeSize / 2, channel.smallScopeSize, channel.smallScopeSize);  // center vertically
+        channel.scopeRectM = Rect(channel.container.bounds.width - channel.largeScopeSize / 2, channel.container.bounds.height - channel.largeScopeSize / 2, channel.largeScopeSize, channel.largeScopeSize);  // center vertically
+
+        // create scopes
+        channel.scopeA = self.makeScope(channel.container, channel.scopeRectA, bus1, 2, 4, zoom1, 2, [color1]);
+        channel.scopeB = self.makeScope(channel.container, channel.scopeRectB, bus2, 2, 4, zoom1, 2, [color1]);
+        channel.scopeM = self.makeScope(channel.container, channel.scopeRectM, bus3, 2, 4, zoom2, 2, [color2]);
+
+        // arrow
+        channel.container.drawFunc_({|view|
+
+            Pen.moveTo((channel.scopeA.container.bounds.right+0)@channel.scopeA.container.bounds.center.y);
+            Pen.lineTo((channel.scopeM.container.bounds.left-15)@channel.scopeA.container.bounds.center.y);  // don't go to tip otherwise see the edge
+            Pen.strokeColor_(Color.white).width_(1).smoothing_(false).stroke();
+
+            Pen.beginPath;
+            Pen.moveTo((channel.scopeM.container.bounds.left-2)@channel.scopeA.container.bounds.center.y);
+            Pen.lineTo((channel.scopeM.container.bounds.left-18)@(channel.scopeA.container.bounds.center.y+6));
+            Pen.lineTo((channel.scopeM.container.bounds.left-18)@(channel.scopeA.container.bounds.center.y-6));
+            Pen.lineTo((channel.scopeM.container.bounds.left-2)@(channel.scopeA.container.bounds.center.y));
+            Pen.fillColor_(Color.white).smoothing_(true).fill();
+
+            Pen.moveTo((channel.scopeB.container.bounds.left-0)@channel.scopeB.container.bounds.center.y);
+            Pen.lineTo((channel.scopeM.container.bounds.right+15)@channel.scopeB.container.bounds.center.y);  // don't go to tip otherwise see the edge
+            Pen.strokeColor_(Color.white).width_(1).smoothing_(false).stroke();
+
+            Pen.beginPath;
+            Pen.moveTo((channel.scopeM.container.bounds.right+2)@channel.scopeB.container.bounds.center.y);
+            Pen.lineTo((channel.scopeM.container.bounds.right+18)@(channel.scopeB.container.bounds.center.y+6));
+            Pen.lineTo((channel.scopeM.container.bounds.right+18)@(channel.scopeB.container.bounds.center.y-6));
+            Pen.lineTo((channel.scopeM.container.bounds.right+2)@(channel.scopeB.container.bounds.center.y));
+            Pen.fillColor_(Color.white).smoothing_(true).fill();
+
+        });
+
+        // return
+        channel
+    };
+
+    // all four
+    if (oscs == \all) {
+
+        // formatting
+        self.channelWidth = self.channelsContainer.bounds.width/2;
+        self.channelHeight = self.channelsContainer.bounds.height/2;
+        self.channelRect = Rect(0, 0, self.channelWidth, self.channelHeight);
+
+        // main output bus pair
+        self.mixedOutBusPair1 = Bus.new('audio', 4+0, numChannels:2);
+        self.mixedOutBusPair2 = Bus.new('audio', 6+0, numChannels:2);
+        self.mixedOutBusPair3 = Bus.new('audio', 8+0, numChannels:2);
+        self.mixedOutBusPair4 = Bus.new('audio', 10+0, numChannels:2);
+
+        // create 4 channels
+        self.channel1 = self.channelFactory(model.componentOutBusses[0], model.componentOutBusses[1], self.mixedOutBusPair1, self.channelRect.insetBy(40,40),                                               Color.magenta, Color.cyan);
+        self.channel2 = self.channelFactory(model.componentOutBusses[2], model.componentOutBusses[3], self.mixedOutBusPair2, self.channelRect.moveTo(self.channelWidth, 0).insetBy(40,40),                  Color.magenta, Color.cyan);
+        self.channel3 = self.channelFactory(model.componentOutBusses[4], model.componentOutBusses[5], self.mixedOutBusPair3, self.channelRect.moveTo(0, self.channelHeight).insetBy(40,40),                 Color.magenta, Color.cyan);
+        self.channel4 = self.channelFactory(model.componentOutBusses[6], model.componentOutBusses[7], self.mixedOutBusPair4, self.channelRect.moveTo(self.channelWidth, self.channelHeight).insetBy(40,40), Color.magenta, Color.cyan);
+    };
+
+    // single osc
+    if (oscs == \a1b1) {
+
+        // formatting
+        self.channelWidth = self.channelsContainer.bounds.width;
+        self.channelHeight = self.channelsContainer.bounds.height;
+        self.channelRect = Rect(0, 0, self.channelWidth, self.channelHeight);
+
+        // main output bus pair
+        self.mixedOutBusPair1 = Bus.new('audio', 4+0, numChannels:2);
+
+        // create 4 channels
+        self.channel1 = self.channelFactory(model.componentOutBusses[0], model.componentOutBusses[1], self.mixedOutBusPair1, self.channelRect.insetBy(100,100), Color.magenta, Color.cyan);
+    };
+
+    // on close
+    self.win.onClose_({
+        // free busses
+        self.mixedOutBusPair1.free;
+        self.mixedOutBusPair2.free;
+        self.mixedOutBusPair3.free;
+        self.mixedOutBusPair4.free;
     });
 
     // return self

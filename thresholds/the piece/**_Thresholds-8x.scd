@@ -41,6 +41,8 @@
 ~hyst = ~hysteresisMonitor.value(~model);
 ~pd = ~photoDesigner.value(~model)
 ~bg = ~bigKnob.value(~model);
+~hyp = ~hyperspace.value(~model)
+
 ~pb = ~patchbay.value(~model);
 
 // free ------------------------------------------------------------------------
