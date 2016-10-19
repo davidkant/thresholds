@@ -1783,5 +1783,96 @@ SynthDef(\vactrolLED, { |inBus, outBus| Out.kr(outBus, LagUD.kr(A2K.kr(InFeedbac
 
 });
 
+/* ~presets --------------------------------------------------------------------
+
+ sore and recall states.
+
+ REFACTOR
+ -> store and recall should belong to a preset object in the model
+ -> and archive belongs to the model too even tho it will always be global but whatever
+
+ TODO
+ * some things may want to fire on click and others on release, liek save one release
+
+*/
+
+(
+~presets = { |model|
+
+    var self = ();
+
+    // window
+    self.win = Window.new('~presets', Rect(900, 530, 200, 375))
+    .front.alwaysOnTop_(true)
+    .background_(Color.black);
+    self.win.drawFunc_({Pen.strokeColor_(Color.white).width_(2).strokeRect(self.win.bounds.moveTo(0,0).insetBy(2,2))});
+
+    // channels
+    self.channels = 8.collect({()});
+    self.channels.do({|channel, i|
+
+        channel.index = i;
+        channel.isVacant = true;
+
+        channel.button = Button(self.win, Rect(10, i*40+10, 180, 35))
+        .states_([
+            ["Vacancy", Color.black, Color.grey(0.7)],
+            ["Preset " ++ channel.index.asString, Color.black, Color.grey(0.3)],
+            ["Storing", Color.black, Color.red],
+            ["Recalling", Color.black, Color.green],
+        ])
+        .mouseDownAction_({|butt, x, y, modifier|
+            if (modifier == 0 && channel.isVacant.not) { // regular click to recall
+                ~recall.value(channel.index, ~synths);
+                butt.value_(3);
+            } { if (modifier == 131072) { // shift-click to store
+                ~store.value(channel.index, ~synths);
+                butt.value_(2);
+                channel.isVacant = false;
+            } { if (modifier == 262144) { // command-click to erase
+                Archive.global.put(channel.index, nil);
+                channel.isVacant = true;
+                butt.value_(0);
+            }}};
+        })
+        .action_({|butt, modifer|
+            if (channel.isVacant.not) {
+                butt.value_(1);
+            } {
+                butt.value_(0);
+            };
+        });
+
+        if (Archive.global.at(channel.index).isNil.not) {
+            channel.button.value_(1);
+            channel.isVacant = false;
+        } {
+            channel.button.value_(0);
+        };
+
+    });
+
+    // save to disk
+    self.writeButton = Button(self.win, Rect(10, 8*40+10, 180, 35))
+    .states_([
+        ["Write to Disk", Color.black, Color.red.blend(Color.black)],
+        ["Writing ", Color.black, Color.red],
+    ])
+    .mouseDownAction_({|butt, x, y, modifier|
+        if (modifier == 131072) { // shift-click to store
+            'writing archive to disk'.postln;
+            Archive.write();
+            butt.value_(1);
+        }
+    })
+    .action_({|butt|
+        butt.value_(0);
+    });
+
+
+    // return
+    self
+});
+
 // return
 "06: GUIs Loaded!"
