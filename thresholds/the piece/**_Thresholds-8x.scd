@@ -29,24 +29,24 @@
 
 // guis ------------------------------------------------------------------------
 
+~launch = ~launchpad.value(~model);
+
 ~quick1 = ~quickGUI.value(~a1b1,z,"A1B1");
 ~quick2 = ~quickGUI.value(~c1d1,z,"C1D1");
 ~quick3 = ~quickGUI.value(~a2b2,z,"A2B2");
 ~quick4 = ~quickGUI.value(~c2d2,z,"C2D2");
 
-~pairo = ~pairiScope.value(~model);
-~pre = ~presets.value(~model);
-
+~pairi = ~pairiScope.value(~model);
 ~octo = ~octoScope.value(~model);
 ~lp = ~lowPassScope.value(~model);
 ~atr = ~attractors.value(~model, style:2);
-~lf = ~lfoScope.value(~model);
+~lfo = ~lfoScope.value(~model);
 ~hyst = ~hysteresisMonitor.value(~model);
-~pd = ~photoDesigner.value(~model)
-~bg = ~bigKnob.value(~model);
+~pd = ~photoDesigner.value(~model);
+~bk = ~bigKnob.value(~model);
 ~hyp = ~hyperspace.value(~model)
-
 ~pb = ~patchbay.value(~model);
+~pre = ~presets.value(~model);
 
 // free ------------------------------------------------------------------------
 

@@ -1874,5 +1874,79 @@ SynthDef(\vactrolLED, { |inBus, outBus| Out.kr(outBus, LagUD.kr(A2K.kr(InFeedbac
     self
 });
 
+
+/* ~launchpad ------------------------------------------------------------------
+
+ gui control of guis
+
+ add listener to can button state for open needs to know when closed
+ gui object to hold launcher functins and open handles?
+
+ model.guiList determines which guis display
+
+ REFACTOR
+ * gui convention for notifying open closed. store in GUI object and register.
+   then this can talk to the GUI object.
+
+*/
+
+(
+~launchpad = { |model|
+
+    var self = ();
+
+    // formatting
+    self.colors = Dictionary.newFrom([
+        \pair, Color.grey.blend(Color.grey, 0.5),
+        \master, Color.grey.blend(Color.grey, 0.5),
+        \post, Color.grey.blend(Color.grey, 0.5),
+        \preset, Color.grey
+    ]);
+
+    // window
+    self.win = Window.new('~launchpad', Rect(30, 520, 200, model.guiList.size*40+15))
+    .front.alwaysOnTop_(true)
+    .background_(Color.black);
+    self.win.drawFunc_({Pen.strokeColor_(Color.white).width_(2).strokeRect(self.win.bounds.moveTo(0,0).insetBy(2,2))});
+
+    // make channels
+    self.makeChannel = {|self, rect, data|
+
+        var channel = ();
+
+        channel.guiVar = data[0];
+        channel.guiFunc = data[1];
+        channel.guiName = data[2];
+        channel.guiKind = data[3];
+
+        channel.button = Button(self.win, rect)
+        .states_([
+            [channel.guiName, Color.black, self.colors.at(channel.guiKind)],
+        ])
+        .action_({|butt|
+            if (channel.guiVar.interpret.isNil) { // if doesn't exist
+                (channel.guiVar ++ " = " ++ channel.guiFunc).interpret;
+            } { if (channel.guiVar.interpret.win.isClosed) { // if it does exist and win not open
+                (channel.guiVar ++ " = " ++ channel.guiFunc).interpret;
+            } { // else if it does exist and win not open
+                channel.guiVar.interpret.win.front;
+            }};
+
+        });
+
+        // return
+        channel
+    };
+
+    self.channels = model.guiList.collect({|data, i|
+
+        self.makeChannel(Rect(10, i*40+10, 180, 35), data);
+
+    });
+
+    // return
+    self
+});
+
 // return
 "06: GUIs Loaded!"
