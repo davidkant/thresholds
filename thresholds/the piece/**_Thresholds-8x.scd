@@ -21,10 +21,11 @@
 (~dir ++ "04_Synths.scd").load;              // Launch the Synths
 (~dir ++ "05_Model.scd").load;               // MVC Model Setup
 (~dir ++ "06_GUI.scd").load;                 // Load GUIs
-// (~dir ++ "07_MidiControl.scd").load;         // Some Midi Control
+(~dir ++ "08_Presets.scd").load;             // Load Presetsl
 (~dir ++ "09_PostProcessing-8x2.scd").load;  // KOSC -> DAC via RingMods
 (~dir ++ "99_Ringers.scd").load;             // White Walkers --- oh my!
 (~dir ++ "99_Walkers.scd").load;             // White Walkers --- oh my!
+(~dir ++ "07_MidiControl.scd").load;         // Some Midi Control
 
 // guis ------------------------------------------------------------------------
 
@@ -34,6 +35,8 @@
 ~quick4 = ~quickGUI.value(~c2d2,z,"C2D2");
 
 ~pairo = ~pairiScope.value(~model);
+~pre = ~presets.value(~model);
+
 ~octo = ~octoScope.value(~model);
 ~lp = ~lowPassScope.value(~model);
 ~atr = ~attractors.value(~model, style:2);
@@ -51,3 +54,8 @@
 ~c1d1.free
 ~a2b2.free
 ~c2d2.free
+
+~a1b1.run(true)
+~c1d1.run(true)
+~a2b2.run(true)
+~c2d2.run(true)
