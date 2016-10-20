@@ -225,5 +225,128 @@ SynthDef(\mfccAngle, { |inBus, outBus|
 
 });
 
+/* ~markovMaker ----------------------------------------------------------------
+
+ simple first order markov for entropy computations
+
+ NOTES
+ * it's actually two separate transition tables, one for same-to-same
+   transitions and the other for transitions btwn diff elements to combact the
+   effect of first order markov not having a memory
+
+ CONTROLS
+ * ~mark.setNumBins(20)
+ * ~mark.setInitValue(0.1)
+ * ~mark.setForgettingThresh(0.01)
+ * ~mark.setForgettingDur(10)
+ * ~mark.zero
+
+ TODO
+ ? how override getters / setters with object prototyping ...
+ -> i guess that means this should be a proper object
+ -> need to decide convention for setting input range
+ ? a way to inline ttable = ttable * beta
+
+*/
+
+(
+~markovMaker = {
+
+    var self = ();
+
+    // inits
+    self.numBins = 10 + 1;
+    self.binWidth = 1 / (self.numBins - 1);
+    self.initValue = 1;
+    self.forgettingThresh = 0.01;  // value at which we consider an entry forgetten
+    self.forgettingDur = inf;      // time it take to reach forgottenThresh
+    self.beta = 1;                 // scale table by this value each update. this is computed internally.
+    self.fps = 30;                 // assume time passes at 30 updates per second
+    self.prevIndex = -1;
+
+    // update numBins and binWidth
+    self.setNumBins = {|self, num| self.numBins = num + 1; self.binWidth = 1 / (self.numBins - 1); };
+
+    // update initValue but don't zero the table
+    self.setInitValue = {|self, val| self.initValue = val; };
+
+    // update forgottenThresh and beta
+    self.setForgettingThresh = {|self, val| self.forgettingThresh = val; self.updateBeta; };
+
+    // update forgetting and beta
+    self.setForgettingDur = {|self, val| self.forgettingDur = val; self.updateBeta; };
+
+    // calc beta from forgetting thresh and dur @ 30fps THIS IS INTERNAL DO NOT CALL DIRECTLY
+    self.updateBeta = {self.beta = self.forgettingThresh.pow(1/(self.fps*self.forgettingDur))};
+
+    // reset entire table to initial value
+    self.zero = {|self| self.ttable = (self.numBins*self.numBins).collect({self.initValue})};
+
+    // surprise
+    self.surprise = {|self, val|
+
+        // if it's not the first sample
+        if (self.prevIndex != -1) {
+
+            // decimate sample to find ttable bin index
+            // self.currIndex = ((val.clip(-1, 1) + 1) / self.binWidth).round;  // bipolar input range
+            self.currIndex = (val.clip(0, 1) / self.binWidth).round;   // unipolar input range
+
+            // --- surprise --- //
+
+            // normalize ~currIndex row as weighted probabilites and grab ~currIndex
+            // self.prob = self.numBins.collect({|i| self.ttable[self.prevIndex * self.numBins + i]}).normalizeSum[self.currIndex];
+
+            // ONLY UPDATE IF prev != curr
+            if (self.prevIndex != self.currIndex) {
+
+                self.prob = self.numBins.collect({|i|
+
+                    if (self.prevIndex != i) {self.ttable[self.prevIndex * self.numBins + i]} {0}
+
+                }).normalizeSum[self.currIndex];
+
+            } {
+
+                self.prob = self.numBins.collect({|i| self.ttable[self.prevIndex * self.numBins + i]}).normalizeSum[self.currIndex];
+
+            };
+
+            // entropy
+            self.entropy = log(self.prob).neg;
+
+            // --- update --- //
+
+            // first decay
+            self.ttable =  self.ttable * self.beta;
+
+            // increment index in transition table
+            self.ttable[self.prevIndex * self.numBins + self.currIndex] = self.ttable[self.prevIndex * self.numBins + self.currIndex] + 1;
+
+            // curr -> prev
+            self.prevIndex = self.currIndex;
+
+            // return etnropy
+            self.entropy
+
+        // if it is the first sample
+        } {
+
+            // decimate sample to find ttable bin index and store
+            self.prevIndex = (val.clip(0, 1) / self.binWidth).round;
+
+            // return nil
+            nil
+        }
+
+    };
+
+    // initialize table
+    self.zero;
+
+    // return self
+    self
+});
+
 // return
 "10: Analytics Loaded!"
