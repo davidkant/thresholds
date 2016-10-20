@@ -436,5 +436,162 @@ SynthDef(\mfccAngle, { |inBus, outBus|
 
 });
 
+/* ~entropyPlot ----------------------------------------------------------------
+
+ requires: anglegrider, markov
+
+ * set input bus / engine
+ * adjust frame rate
+ * define or instantiate markov in here
+ * make peak variable not hardwird and have a text number peak display
+
+*/
+
+(
+~entropyPlot = {|model|
+
+    var self = ();
+
+    // formatting
+    self.channelWidth = 40;
+    self.channelHeight = 100;
+    self.paddingFromEdge = 10;
+    self.paddingBetween = 10;
+
+    // window
+    self.win = Window.new('~entropyPlot', Rect(900, 700, 410, 120))
+    .front.alwaysOnTop_(true)
+    .background_(Color.black)
+    .drawFunc_({ Pen.strokeColor_(Color.white).width_(2).strokeRect(self.win.bounds.moveTo(0,0).insetBy(2,2));});
+
+    // init channels
+    self.channels = 8.collect({()});
+
+    // create channels
+    8.do({|i|
+
+        // local reference
+        var channel = self.channels[i];
+
+        // channel container
+        channel.container = CompositeView(self.win, Rect(
+            i*(self.channelWidth+self.paddingBetween)+self.paddingFromEdge,
+            self.paddingFromEdge,
+            self.channelWidth,
+            self.channelHeight)).background_(Color.cyan);
+
+        // plot
+        channel.plot = ();
+        channel.plot.view = UserView(self.win, channel.container.bounds.insetBy(2,2)).background_(Color.black);
+        channel.plot.diff = 0.5;
+        channel.plot.entropy = 0.5;
+
+        // drawFunc
+        channel.plot.view.drawFunc_({|view|
+
+            var yPix, yPix2, yPix3;
+
+            yPix = 1 - (channel.plot.entropy / 7) * view.bounds.height;
+            yPix2 = 1 - (channel.plot.diff / (~eEngine.channels[i].mark.numBins-1)) * view.bounds.height;
+
+            // rect 1
+            Pen.fillColor_(if (channel.plot.entropy < 7) {Color.cyan(alpha: 0.5)} {Color.red(alpha: 0.5)});
+            Pen.fillRect(Rect(0, yPix, view.bounds.width/2, view.bounds.height - yPix));
+
+            // rect 2
+            Pen.fillColor_(Color.magenta(alpha: 0.5));
+            Pen.fillRect(Rect(view.bounds.width/2, yPix2, view.bounds.width/2, (1/(~eEngine.channels[i].mark.numBins-1))*view.bounds.height));
+
+            // line 1
+            Pen.moveTo(0@yPix);
+            Pen.lineTo((view.bounds.width/2)@yPix);
+            Pen.strokeColor_(Color.cyan).width_(1).smoothing_(false).stroke();
+
+            // line 2
+            Pen.moveTo((view.bounds.width/2)@yPix2);
+            Pen.lineTo(view.bounds.width@yPix2);
+            Pen.strokeColor_(Color.magenta).width_(1).smoothing_(false).stroke();
+
+            // peak
+/*            if (channel.plot.entropy > 7) {
+                Pen.fillColor_(Color.red(alpha:0.70));
+                Pen.fillRect(Rect(0, 0, view.bounds.width/2, 6));
+            };*/
+
+        });
+
+    });
+
+/*    // calculate
+    self.updatePlots = {
+
+        ~aa.outBus.get({|vals|
+
+            vals[0..0].do({|val, i|
+
+                var entropy;
+
+                // calculate
+                entropy = ~mark.surprise(2*val/(pi));
+
+                // peak
+                if (entropy > 7) {'PEAK'.postln; entropy.postln;};
+
+                // if different than current val update plot
+                // if (val != self.channels[i].plot.val, {
+
+                // update val
+                self.channels[i].plot.entropy = entropy;
+                self.channels[i].plot.diff = ~mark.currIndex;
+
+                // refresh
+                {self.channels[i].plot.view.refresh()}.defer;
+
+            });
+        });
+    };*/
+
+        // calculate
+    self.updatePlots = {
+
+        ~eEngine.channels.do({|channel, i|
+
+                // peak
+            // if (entropy > 7) {'PEAK'.postln; entropy.postln;};
+
+                // if different than current val update plot
+                // if (val != self.channels[i].plot.val, {
+
+            // update val
+            self.channels[i].plot.entropy = channel.entropy;
+            self.channels[i].plot.diff = channel.state;
+
+            // refresh
+            {self.channels[i].plot.view.refresh()}.defer;
+
+        });
+    };
+
+    // fork animation routine @60Hz on AppClock
+    // self.animationRoutine = {loop{self['updatePlots'].value(); 0.016666666666667.yield;}}.fork(AppClock);
+    // self.animationRoutine = {loop{self['updatePlots'].value(); 0.033333333333333.yield;}}.fork(AppClock);
+
+    // register with entropy engine
+    ~eEngine.addDependant(self['updatePlots']);
+
+    // on close
+    self.win.onClose_({
+        // remove listener
+        // model.removeDependant(self['updater']);
+        // remove animation routine
+        // self.animationRoutine.stop;
+        ~eEngine.removeDependant(self['updatePlots']);
+    });
+
+    // return self
+    self
+
+});
+
 // return
 "10: Analytics Loaded!"
