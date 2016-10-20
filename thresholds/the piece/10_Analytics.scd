@@ -348,5 +348,93 @@ SynthDef(\mfccAngle, { |inBus, outBus|
     self
 });
 
+/* ~entropyEngine --------------------------------------------------------------
+
+ TODO
+ -> needs a head!
+
+ requires: anglegrider, markovMAker
+
+ * set input bus / engine
+ * adjust frame rate
+ * define or instantiate markov in here
+ * make peak variable not hardwird and have a text number peak display
+ * scaling
+
+ markov controls
+ * ~mark.setNumBins(20)
+ * ~mark.setInitValue(0.1)
+ * ~mark.setForgettingThresh(0.01)
+ * ~mark.setForgettingDur(10)
+ * ~mark.zero
+
+*/
+
+(
+~entropyEngine = {|model|
+
+    var self = ();
+
+    // init channels
+    self.channels = 8.collect({()});
+
+    // create channels
+    8.do({|i|
+
+        // local reference
+        var channel = self.channels[i];
+
+        // inits
+        channel.state = 0;
+        channel.entropy = 0;
+
+        // markov
+        channel.mark = ~markovMaker.value();
+
+    });
+
+    // calculate
+    self.updateData = {
+
+        // update channels
+        ~grinder.channels.do({|channel, i|
+
+            // calculate entropy
+            var entropy = self.channels[i].mark.surprise(2*channel.angle/(pi));  // <-- scaling
+
+            // update val
+            self.channels[i].entropy = entropy;
+            self.channels[i].state = self.channels[i].mark.currIndex;
+
+        });
+
+        // notify dependants
+        self.changed();
+
+    };
+
+    // register with ~angleGrinder
+    ~grinder.addDependant(self['updateData']);
+
+    // on close remove self from ~angleGrinder dependant list
+    self.onClose = {|self|
+        ~grinder.removeDependant(self['updateData']);
+    };
+
+    // fork animation routine @60Hz on AppClock
+    // self.animationRoutine = {loop{self['updatePlots'].value(); 0.016666666666667.yield;}}.fork(AppClock);
+    // self.animationRoutine = {loop{self['updateData'].value(); 0.033333333333333.yield;}}.fork(AppClock);
+
+    // on close
+    // self.win.onClose_({
+        // remove animation routine
+       // self.animationRoutine.stop;
+    // });
+
+    // return self
+    self
+
+});
+
 // return
 "10: Analytics Loaded!"
