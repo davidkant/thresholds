@@ -593,5 +593,130 @@ SynthDef(\mfccAngle, { |inBus, outBus|
 
 });
 
+/* ~entropySequencer -----------------------------------------------------------
+
+ a state sequencer.
+
+ TODO
+ -> select which channels to see
+ -> figure out scaling convention what comes out what goes in
+ -> scaling is a hack
+ -> turn onoff min max for efficienct
+
+*/
+
+(
+~entropySequencer = {|model, numChannels=2|
+
+    var self = ();
+
+    // params
+    self.buffSize = 200;
+
+    // formatting
+    self.colors = [Color.red, Color(1,0.5,0), Color.yellow, Color.green, Color.cyan, Color(0, 0.5, 1), Color.magenta, Color(0.5,0,1)];
+
+    // window
+    self.win = Window.new('~entropySequencer', Rect(900, 400, 760, numChannels*200+10))
+    .front.alwaysOnTop_(true)
+    .background_(Color.black)
+    .drawFunc_({ Pen.strokeColor_(Color.white).width_(2).strokeRect(self.win.bounds.moveTo(0,0).insetBy(2,2));});
+
+    // init channels
+    self.channels = numChannels.collect({()});
+
+    // create channels
+    self.channels.do({|channel, i|
+
+        // local reference
+        // var channel = self.channels[i];
+
+        // angle
+        channel.state = self.buffSize.collect({0.5});
+        channel.entropy = self.buffSize.collect({0.5});
+
+        // plot
+        channel.plot = ();
+        channel.plot.view = UserView(self.win, Rect(
+            6,
+            i*200+6,
+            750,
+            200-2)).background_(Color.grey(0.1));
+
+        // drawFunc
+        channel.plot.view.drawFunc_({|view|
+
+            // first
+            Pen.moveTo(0 @ (0.5 * view.bounds.height));
+
+            // subsequent
+            channel.state.do({|val, index|
+                Pen.lineTo( (index/self.buffSize * view.bounds.width)@(1- val * view.bounds.height));
+            });
+
+            // stroke
+            Pen.strokeColor_(Color.magenta).width_(2).smoothing_(true).stroke();
+
+            // first
+            Pen.moveTo(0 @ (0.5 * view.bounds.height));
+
+            // subsequent
+            channel.entropy.do({|val, index|
+                Pen.lineTo( (index/self.buffSize * view.bounds.width)@(1 - val * view.bounds.height));
+            });
+
+            // stroke
+            Pen.strokeColor_(Color.cyan).width_(2).smoothing_(true).stroke();
+
+        });
+
+    });
+
+    // update plot
+    self.updatePlots = {
+
+        ~eEngine.channels[0..(numChannels-1)].do({|channel, i|
+
+            var hi, lo, val, entropy;
+
+            val = channel.state / (channel.mark.numBins-1);
+            entropy = channel.entropy / 7;
+
+            // update val: append to list
+            self.channels[i].state = self.channels[i].state.rotate(-1).put(self.buffSize-1, val);
+            self.channels[i].entropy = self.channels[i].entropy.rotate(-1).put(self.buffSize-1, entropy);
+
+            // refresh plot
+            {self.channels[i].plot.view.refresh()}.defer;
+
+        })
+    };
+
+    // fork animation routine @60Hz on AppClock
+    // self.animationRoutine = {loop{self['updatePlot'].value(); 0.016666666666667.yield;}}.fork(AppClock);
+    // self.animationRoutine = {loop{self['updatePlots'].value(); 0.033333333333333.yield;}}.fork(AppClock);
+
+    // register with entropy engine
+    ~eEngine.addDependant(self['updatePlots']);
+
+    // on close
+    self.win.onClose_({
+        // remove animation routine
+        // self.animationRoutine.stop;
+        // free each channel
+        self.channels.do({|channel|
+            // free channel mfcc machine synths
+            // channel.mfccAngleSynth.free;
+        });
+        // free outBus nope cuz it belongs to ~aa
+        // self.outBus.free;
+        ~eEngine.removeDependant(self['updatePlots']);
+    });
+
+    // return self
+    self
+
+});
+
 // return
 "10: Analytics Loaded!"
