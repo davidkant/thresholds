@@ -113,8 +113,8 @@ z = SynthDef(\feedbackPair, {
     /*----------------------------------------------------------------*/
 
     // smooth input
-    koscRA = Lag.kr(koscRA, lagTime: 0.3);
-    koscRB = Lag.kr(koscRB, lagTime: 0.3);
+    koscRA = Lag.ar(K2A.ar(koscRA), lagTime: 0.3);  // *ar for audio rate moduation r; otherwise k2a at DunnOsc
+    koscRB = Lag.ar(K2A.ar(koscRB), lagTime: 0.3);  // *ar for audio rate moduation r; otherwise k2a at DunnOsc
     preAmpPotA = Lag.kr(preAmpPotA, lagTime: 0.3);
     preAmpPotB = Lag.kr(preAmpPotB, lagTime: 0.3);
     powAmpPotA = Lag.kr(powAmpPotA, lagTime: 0.3);
@@ -166,8 +166,8 @@ z = SynthDef(\feedbackPair, {
     // sigVtrolB[0].poll(label: \VtrolB);
 
     // [8] feedback R in parallel
-    koscA = DunnOsc.ar(r: min((sigVtrolA[0] + (2147483647 * (1-vactrolGateA))), koscRA), freq: koscFreq, error: koscError) * [1,3,1] * koscGateA; // Y SCALE FIX;
-    koscB = DunnOsc.ar(r: min((sigVtrolB[0] + (2147483647 * (1-vactrolGateB))), koscRB), freq: koscFreq, error: koscError) * [1,3,1] * koscGateB; // Y SCALE FIX;;
+    koscA = DunnOsc.ar(r: ResistorsParallel.ar(sigVtrolA[0], koscRA), freq: koscFreq, error: koscError) * [1,3,1] * koscGateA; // Y SCALE FIX;
+    koscB = DunnOsc.ar(r: ResistorsParallel.ar(sigVtrolB[0], koscRB), freq: koscFreq, error: koscError) * [1,3,1] * koscGateB; // Y SCALE FIX;
 
     koscA = LeakDC.ar(koscA);
     koscB = LeakDC.ar(koscB);
