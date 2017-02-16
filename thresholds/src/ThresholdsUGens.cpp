@@ -35,9 +35,10 @@
    ** internally runs in terms 9v but outputs digital 1.0
    -> combine zmul and saturation level / un-hard code saturation level
    ?? do we need local copies for computation?
-   ?? is ZXP inefficient double incrememnt cuz already counting numsamples?
    -> more intelligent oversampling interpolation please
    -> explanation: r determines equation coefficients C
+   -> interpolate r signal when oversampling
+   -> cast / confirm c is computed using double precision maths
  
 */
 
@@ -70,6 +71,7 @@ struct DunnOsc : public Unit {
 extern "C" {
     void DunnOsc_Ctor(DunnOsc *unit);
     void DunnOsc_next(DunnOsc *unit, int inNumSamples);
+    void DunnOsc_next2(DunnOsc *unit, int inNumSamples);
 }
 
 // constructor -------------------------------------------------------------- //
@@ -91,14 +93,14 @@ void DunnOsc_Ctor(DunnOsc* unit){
 void DunnOsc_next(DunnOsc *unit, int inNumSamples) {
     
     // output buffers
-    float *outX = ZOUT(0);
-    float *outY = ZOUT(1);
-    float *outZ = ZOUT(2);
+    float *outX = ZOUT(0);  // pointer to X output buffer
+    float *outY = ZOUT(1);  // pointer to Y output buffer
+    float *outZ = ZOUT(2);  // pointer to Z output buffer
     
     // input buffers
-    double r = ZIN0(0);      // variable resistance value
-    double freq = ZIN0(1);   // oscillator frequency
-    double error = ZIN0(2);  // numerical solution error
+    float *r = ZIN(0);       // audio rate: variable resistance value
+    double freq = ZIN0(1);   // control rate: oscillator frequency control
+    double error = ZIN0(2);  // control rate: numerical solution error
     
     // internals
     double h;          // h timestep
@@ -115,23 +117,29 @@ void DunnOsc_next(DunnOsc *unit, int inNumSamples) {
     double ynm1 = unit->ynm1;
     double znm1 = unit->znm1;
     
+    // ---- calc control rate vars ---- //
+    
     // calc time step h from error
     h = RATIO * error;
     
     // calc itersPerSamp from h
     itersPerSamp = (int)round((100 * RATIO / h) * freq);
     
-    // calc c from r
-    c = R2C/r;
-
     // calc alpha (accurate on sample rate change)
     alpha = (1.0/SAMPLERATE/itersPerSamp) /
         (RC_COEFF+(1.0/SAMPLERATE/itersPerSamp));
     
+    // ---- loop through samples ---- //
+    
     // calc samples (oversample to maintain frequency for small time step h)
-    for (int i=0; i<inNumSamples; ++i) {
-        for (int j=0; j<itersPerSamp; j++) {
-            
+    LOOP1(inNumSamples,
+          
+        // calc c from r
+        c = R2C/ZXP(r);
+        
+        // oversample loop
+        LOOP1(itersPerSamp,
+          
             // ---- modified Euler + discrete time filter ---- //
             
             // previous state
@@ -140,7 +148,7 @@ void DunnOsc_next(DunnOsc *unit, int inNumSamples) {
             znm1 = zn;
             
             // w third deriv
-            w = -A_COEFF*znm1 - ynm1 - B_COEFF*xnm1 + c*SGN(xnm1);
+            w = -A_COEFF*znm1 - ynm1 - B_COEFF*xnm1 + c*SGN(xnm1); 
             
             // z second deriv
             zn = SATURATE(zn + h * w * Z_MUL);
@@ -150,13 +158,13 @@ void DunnOsc_next(DunnOsc *unit, int inNumSamples) {
             
             // x signal
             xn = SATURATE(xn + h * ynm1);
-        }
+        );
         
         // write output buffers one sample and increment index
         ZXP(outX) = xn / 9.0;
         ZXP(outY) = yn / 9.0;
         ZXP(outZ) = zn / 9.0;
-    }
+    );
     
     // update state variables
     unit->xn = xn;
@@ -166,6 +174,7 @@ void DunnOsc_next(DunnOsc *unit, int inNumSamples) {
     unit->ynm1 = ynm1;
     unit->znm1 = znm1;
 }
+
 
 // load --------------------------------------------------------------------- //
 PluginLoad(DunnOsc)
