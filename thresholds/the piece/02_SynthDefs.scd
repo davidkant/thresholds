@@ -13,7 +13,7 @@
 
 */
 
-"02: Adding SynthDefs...".postln;
+/*"02: Adding SynthDefs...".postln;*/
 
 // control spec
 (
@@ -50,10 +50,10 @@ Spec.add(\lfoPotB, [0, 1, \linear]);
 Spec.add(\lfoCapSwitchB, [0, 1, \linear, 1]);
 Spec.add(\lfoLowPassPotB, [0, 1, \linear]);
 Spec.add(\vactrolScalarB, [0.1, 2.0, \linear]);
-// Spec.add(\vactrolAttackB, [0.0, 0.1, \linear]);
-// Spec.add(\vactrolDecayB, [0.0, 4.0, \linear]);
-// Spec.add(\vactrolHysteresisB, [0.0, 100.0, \linear]);
-// Spec.add(\vactrolDepthB, [1.0, 6.0, \linear]);
+Spec.add(\vactrolAttackB, [0.0, 0.1, \linear]);
+Spec.add(\vactrolDecayB, [0.0, 4.0, \linear]);
+Spec.add(\vactrolHysteresisB, [0.0, 100.0, \linear]);
+Spec.add(\vactrolDepthB, [1.0, 6.0, \linear]);
 Spec.add(\koscGateB, [0, 1, \linear, 1]);
 Spec.add(\vactrolGateB, [0, 1, \linear, 1]);
 Spec.add(\lfoGateB, [0, 1, \linear, 1]);
@@ -80,7 +80,7 @@ z = SynthDef(\feedbackPair, {
     otherIn,
 
     // kosc
-    koscRA = 18.6, koscRB = 18.6, koscFreq = 0.85, koscError = 10.0,
+    koscRA = 18.6, koscRB = 18.6, koscFreq = 0.85, koscError = 4.0,
     lowPassPot = 0.85,
 
     // feedback path
@@ -89,10 +89,12 @@ z = SynthDef(\feedbackPair, {
     lfoCapSwitchB = 0, lfoLowPassPotA = 0.85, lfoLowPassPotB = 0.85,
 
     vactrolScalarA = 1, vactrolAttackA = 0.027, vactrolDecayA = 2.000,
-    vactrolHysteresisA = 60, vactrolDepthA = 2,
+    vactrolHysteresisA = 3, vactrolDepthA = 2,
 
     vactrolScalarB = 1, vactrolAttackB = 0.023, vactrolDecayB = 1.000,
-    vactrolHysteresisB = 60, vactrolDepthB = 2,
+    vactrolHysteresisB = 3, vactrolDepthB = 2,
+
+    lfoPulseWidthA = 0.5, lfoPulseWidthB = 0.5,
 
     // gates
     koscGateA = 1, koscGateB = 1,
@@ -129,15 +131,15 @@ z = SynthDef(\feedbackPair, {
     sigLP = LowPass741.ar(sigMixedIn, (1-lowPassPot)); //.scope(name:"lowpass");
 
     // [2] lfo
-    lfoSigA = LFOsc555.ar(lfoPotA, cswitch: lfoCapSwitchA);
+    lfoSigA = LFOsc555.ar(lfoPotA, cswitch: lfoCapSwitchA, width: lfoPulseWidthA);
     lfoSigLPA = LowPass741.ar(lfoSigA, (1-lfoLowPassPotA));
 
-    lfoSigB = LFOsc555.ar(lfoPotB, cswitch: lfoCapSwitchB);
+    lfoSigB = LFOsc555.ar(lfoPotB, cswitch: lfoCapSwitchB, width: lfoPulseWidthB);
     lfoSigLPB = LowPass741.ar(lfoSigB, (1-lfoLowPassPotB));
 
     // [3] mixer
-    sigMix2A = Mixer741.ar([sigLP * lfoGateA, lfoSigA]); //.scope(name:"mixer");
-    sigMix2B = Mixer741.ar([sigLP * lfoGateB, lfoSigB]); //.scope(name:"mixer");
+    sigMix2A = Mixer741.ar([sigLP, lfoSigLPA * lfoGateA]); //.scope(name:"mixer");
+    sigMix2B = Mixer741.ar([sigLP, lfoSigLPB * lfoGateB]); //.scope(name:"mixer");
 
     // [4] preamp
     Out.ar(rNetOutBusA, [sigMix2A, K2A.ar(preAmpPotA)]);
@@ -211,4 +213,4 @@ z = SynthDef(\feedbackPair, {
 );
 
 // return
-"++"
+"02: SynthDefs Added!"
