@@ -4,6 +4,267 @@
 
 */
 
+/* ~differenceEngine -----------------------------------------------------------
+
+ options
+ * feature: mfcc, mel spectrum, pitch, centoid, etc
+ * distance: cosine, what else?
+
+ would like:
+ * window size and hop (let's start with one frame and one frame)
+
+ * don't hardwrire channels to 8
+ * is there a way to guarantee the fft buffers allocate in time?
+ * i assume local buffs are freed by the synth on free?
+ * image to to delay / smoothing
+ * average instantaneous / peak picking + image to smooth / catch peack
+
+    // init fftBuff's (so they allocate before launching the synth)
+    self.channels.do({|channel| channel.fftBuff = Buffer.alloc(s, 1024, 1)});
+ * more efficient way to write cosine distance arithmetic?
+ * sample and hold on the mfcc1 and mfcc2 or downstream?
+
+ * NOTE: buff size and hop must match @FFT and @FFTTrigger
+ * inefficient refreshing twice
+
+*/
+
+(
+    SynthDef(\differencer, { |inBus, outBus, outBusSmoothed|
+
+
+        var in, fft, mfcc1, mfcc2, delta;
+
+        // input
+        in = InFeedback.ar(inBus);
+
+        // features
+        fft = FFT(LocalBuf(2048), in, hop: 0.5);
+        mfcc1 = MFCC.kr(fft);
+        mfcc2 = Delay1.kr(mfcc1);
+
+        // cosine distance
+        delta = ((mfcc1 * mfcc2).sum / (mfcc1.pow(2).abs.sum.sqrt * mfcc2.pow(2).abs.sum.sqrt));
+
+        // invert and scale
+        delta = delta.linlin(-1, 1, 3, 0);
+
+        // sample and hold b/c mfcc1 == mfcc2 between hops
+        delta = Latch.kr(delta, FFTTrigger(LocalBuf(2048), hop: 0.5));
+
+        // out
+        Out.kr(outBus, delta);
+        Out.kr(outBusSmoothed, LagUD.kr(delta, 0, 5));
+
+    }).add;
+);
+
+(
+~differenceEngine = {|model|
+
+    var self = ();
+
+    // formatting
+    self.channelWidth = 2*40;
+    self.channelHeight = 2*100;
+    self.paddingFromEdge = 10;
+    self.paddingBetween = 10;
+
+    // synthdef to measure change
+
+    // window
+    self.win = Window.new('~differenceEngine', Rect(900, 700, 9*self.channelWidth+10, self.channelHeight+20))
+    .front.alwaysOnTop_(true)
+    .background_(Color.black)
+    .drawFunc_({ Pen.strokeColor_(Color.white).width_(2).strokeRect(self.win.bounds.moveTo(0,0).insetBy(2,2));});
+
+    // init channels
+    self.channels = 8.collect({()});
+
+    // init outBus's (all at once)
+    self.outBus = Bus.control(s, 8);
+    self.outBusSmoothed = Bus.control(s, 8);
+
+    // create channels
+    model.mixedOutBusses.do({|bus, i|
+
+        // local reference
+        var channel = self.channels[i];
+        channel.inBus = bus;
+
+        // synth and which of pair
+        channel.msynth = model.synths[i.div(2)];
+        channel.aorb = [\A,\B][i%2];
+
+        // channel container
+        channel.container = CompositeView(self.win, Rect(
+            i*(self.channelWidth+self.paddingBetween)+self.paddingFromEdge,
+            self.paddingFromEdge,
+            self.channelWidth,
+            self.channelHeight)).background_(Color.cyan);
+
+        // plot
+        channel.plot = ();
+        channel.plot.view = UserView(self.win, channel.container.bounds.insetBy(2,2)).background_(Color.black);
+        channel.plot.val = 0.5;
+        channel.plot.valSmoothed = 0.5;
+        channel.plot.view.drawFunc_({|view|
+
+            /*
+            var yPix, yPix2;
+
+            yPix = 1 - channel.plot.val2 * view.bounds.height;
+            yPix2= 1 - channel.plot.val2 * view.bounds.height;
+
+            // rect
+            Pen.fillColor_(Color.cyan);
+            Pen.fillRect(Rect(0, yPix, view.bounds.width, view.bounds.height - yPix));
+
+            // line
+            Pen.moveTo(0@yPix2);
+            Pen.lineTo(view.bounds.width@yPix2);
+            Pen.strokeColor_(Color.cyan).width_(1).smoothing_(false).stroke();*/
+
+            var yPix = 1 - channel.plot.valSmoothed * view.bounds.height;
+
+            // rect
+            Pen.fillColor_(Color.magenta.alpha_(channel.plot.val*2)); // *2 for perceptual brightness scaling
+            Pen.fillRect(Rect(0, yPix, view.bounds.width, view.bounds.height - yPix));
+
+            // line
+            Pen.moveTo(0@yPix);
+            Pen.lineTo(view.bounds.width@yPix);
+            Pen.strokeColor_(Color.cyan).width_(1).smoothing_(false).stroke();
+
+        });
+
+        // init outBus
+        channel.outBus = self.outBus.subBus(i);
+        channel.outBusSmoothed = self.outBusSmoothed.subBus(i);
+
+        // launch differencer synth
+        channel.differencer = Synth(\differencer, [\inBus, channel.inBus, \outBus, channel.outBus, \outBusSmoothed, channel.outBusSmoothed]);
+
+    });
+
+/*    // plot animation
+    self.updatePlots = {
+
+        self.outBus.get({|vals|
+
+            vals.do({|val, i|
+
+                // if different than current val update plot
+                if (val != self.channels[i].plot.val, {
+
+                    // update val
+                    self.channels[i].plot.val = val;
+
+                    // refresh
+                    {self.channels[i].plot.view.refresh()}.defer;
+
+                });
+            });
+        });
+    };*/
+
+/*        // plot animation
+    self.updatePlots = {
+
+        self.outBus.get({|vals|
+
+            8.do({|i|
+
+                // if different than current val update plot
+                if (vals[2*i] != self.channels[i].plot.val, {
+
+                    // update val
+                    self.channels[i].plot.val = vals[2*i];
+
+                    // refresh
+                    {self.channels[i].plot.view.refresh()}.defer;
+
+                });
+
+                // if different than current val update plot
+                if (vals[2*i+1] != self.channels[i].plot.val2, {
+
+                    // update val
+                    self.channels[i].plot.val2 = vals[2*i+1];
+
+                    // refresh
+                    {self.channels[i].plot.view.refresh()}.defer;
+
+                });
+            });
+        });
+    };*/
+
+    // plot animation
+    self.updatePlots = {
+
+        self.outBus.get({|vals|
+
+            vals.do({|val, i|
+
+                // if different than current val update plot
+                if (val != self.channels[i].plot.val, {
+
+                    // update val
+                    self.channels[i].plot.val = val;
+
+                    // refresh
+                    {self.channels[i].plot.view.refresh()}.defer;
+
+                });
+            });
+        });
+
+        self.outBusSmoothed.get({|vals|
+
+            vals.do({|val, i|
+
+                // if different than current val update plot
+                if (val != self.channels[i].plot.valSmoothed, {
+
+                    // update val
+                    self.channels[i].plot.valSmoothed = val;
+
+                    // refresh
+                    {self.channels[i].plot.view.refresh()}.defer;
+
+                });
+            });
+        });
+
+        // notify dependants
+        self.changed();
+
+    };
+
+
+    // fork animation routine @60Hz on AppClock
+    self.animationRoutine = {loop{self['updatePlots'].value(); 0.016666666666667.yield;}}.fork(AppClock);
+
+    // on close
+    self.win.onClose_({
+        // remove listener
+        model.removeDependant(self['updater']);
+        // remove animation routine
+        self.animationRoutine.stop;
+        // free channel differencer synths
+        self.channels.do({|channel| channel.differencer.free});
+        // free outBus
+        self.outBus.free;
+        self.outBusSmoothed.free;
+    });
+
+    // return self
+    self
+
+});
+
+
 /* ~angleGrinder ---------------------------------------------------------------
 
  projects a feature vector to 1-d by multi angle measured to normal vector.
@@ -259,7 +520,7 @@ SynthDef(\mfccAngle, { |inBus, outBus|
     self.binWidth = 1 / (self.numBins - 1);
     self.initValue = 1;
     self.forgettingThresh = 0.01;  // value at which we consider an entry forgetten
-    self.forgettingDur = inf;      // time it take to reach forgottenThresh
+    self.forgettingDur = 12;       // time it take to reach forgottenThresh
     self.beta = 1;                 // scale table by this value each update. this is computed internally.
     self.fps = 30;                 // assume time passes at 30 updates per second
     self.prevIndex = -1;
@@ -453,13 +714,13 @@ SynthDef(\mfccAngle, { |inBus, outBus|
     var self = ();
 
     // formatting
-    self.channelWidth = 40;
-    self.channelHeight = 100;
+    self.channelWidth = 40*2;
+    self.channelHeight = 100*2;
     self.paddingFromEdge = 10;
     self.paddingBetween = 10;
 
     // window
-    self.win = Window.new('~entropyPlot', Rect(900, 700, 410, 120))
+    self.win = Window.new('~entropyPlot', Rect(900, 700, 730, 220))
     .front.alwaysOnTop_(true)
     .background_(Color.black)
     .drawFunc_({ Pen.strokeColor_(Color.white).width_(2).strokeRect(self.win.bounds.moveTo(0,0).insetBy(2,2));});
