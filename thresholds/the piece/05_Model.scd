@@ -16,12 +16,13 @@
  -> ... args syntax for lists of parameters
  -> populate upon instatiation with current synth values
  -> don't forget to set internal data! want to get from model not query synth
+ -> synth should probs be the first arg
 
  -> is this the best way to reset all vals of an array to 0?
 
 */
 
-"05: Creating Model...".postln;
+// "05: Creating Model...".postln;
 
 // init model
 (
@@ -40,6 +41,22 @@
 ~model.dir = ~dir;
 );
 
+// guis
+(
+~model.guiList = [
+    ["~pairi",  "~pairiScope.value(~model)",          "~pairiScope",     \pair],
+    ["~octo",   "~octoScope.value(~model)",           "~octoScope",      \master],
+    ["~lp",     "~lowPassScope.value(~model)",        "~lowPassScope",   \master],
+    ["~atr",    "~attractors.value(~model, style:2)", "~attractors",     \master],
+    ["~lfo",    "~lfoScope.value(~model)",            "~lfoScope",       \master],
+    ["~hyst",   "~hysteresisMonitor.value(~model)",   "~hysterMon",      \master],
+    ["~pd",     "~photoDesigner.value(~model)",       "~photoDesigner",  \master],
+    ["~bk",     "~bigKnob.value(~model)",             "~bigKnob",        \master],
+    ["~hyp",    "~hyperspace.value(~model)",          "~hypersapce",     \master],
+    ["~pb",     "~patchbay.value(~model)",            "~patchbay",       \post],
+    ["~pre",    "~presets.value(~model)",             "~presets",        \preset],
+]);
+
 // set synth param Controller function
 (
 ~model.setSynth = { arg self, synth, param, value;
@@ -48,7 +65,7 @@
     if (synth.notNil) {synth.set(param, value)};
 
     // notify dependants
-    self.changed(\setSynth, ~model.synthsIndex[synth], param, value);
+    self.changed(\setSynth, ~model.synthsIndex[synth], param, value, synth); // synth should really be the first arg
 
 });
 
@@ -57,7 +74,7 @@
 ~model.setSynthJustDependants = { arg self, synth, param, value;
 
     // notify dependants
-    self.changed(\setSynth, ~model.synthsIndex[synth], param, value);
+    self.changed(\setSynth, ~model.synthsIndex[synth], param, value, synth);  // synth should really be the first arg
 
 });
 
@@ -74,6 +91,15 @@
         if (synth.notNil) {
             self.setSynth(synth, param ++ \A, value);
             self.setSynth(synth, param ++ \B, value);
+        }
+
+    });
+
+    // this too
+    self.synths.do({|synth|
+
+        if (synth.notNil) {
+            self.setSynth(synth, param, value);
         }
 
     });
@@ -123,4 +149,4 @@
 // ~model.dependants;
 
 // return
-"+++++"
+"05: Model Created!"
