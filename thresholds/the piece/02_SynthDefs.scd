@@ -50,8 +50,8 @@ Spec.add(\lfoPotB, [0, 1, \linear]);
 Spec.add(\lfoCapSwitchB, [0, 1, \linear, 1]);
 Spec.add(\lfoLowPassPotB, [0, 1, \linear]);
 Spec.add(\vactrolScalarB, [0.1, 2.0, \linear]);
-Spec.add(\vactrolAttackB, [0.0, 0.1, \linear]);
-Spec.add(\vactrolDecayB, [0.0, 4.0, \linear]);
+Spec.add(\vactrolAttackB, [0.001, 0.3, \exp]);
+Spec.add(\vactrolDecayB, [0.01, 3.0, \exp]);
 Spec.add(\vactrolHysteresisB, [0.0, 100.0, \linear]);
 Spec.add(\vactrolDepthB, [1.0, 6.0, \linear]);
 Spec.add(\koscGateB, [0, 1, \linear, 1]);
@@ -88,10 +88,10 @@ z = SynthDef(\feedbackPair, {
     powAmpPotB = 0.9, lfoPotA = 0.33, lfoPotB = 0.22, lfoCapSwitchA = 0,
     lfoCapSwitchB = 0, lfoLowPassPotA = 0.85, lfoLowPassPotB = 0.85,
 
-    vactrolScalarA = 1, vactrolAttackA = 0.027, vactrolDecayA = 2.000,
+    vactrolScalarA = 1, vactrolAttackA = 0.027, vactrolDecayA = 0.3,
     vactrolHysteresisA = 3, vactrolDepthA = 2,
 
-    vactrolScalarB = 1, vactrolAttackB = 0.023, vactrolDecayB = 1.000,
+    vactrolScalarB = 1, vactrolAttackB = 0.023, vactrolDecayB = 0.4,
     vactrolHysteresisB = 3, vactrolDepthB = 2,
 
     lfoPulseWidthA = 0.5, lfoPulseWidthB = 0.5,
