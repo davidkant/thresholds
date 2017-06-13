@@ -20,12 +20,15 @@
 (~dir ++ "03_Networking.scd").load;          // Networking Busses setup
 (~dir ++ "04_Synths.scd").load;              // Launch the Synths
 (~dir ++ "05_Model.scd").load;               // MVC Model Setup
+(~dir ++ "05_Settings.scd").load;            // Apply Settings
+(~dir ++ "99_Random.scd").load;              // Random State
 (~dir ++ "06_GUI.scd").load;                 // Load GUIs
 (~dir ++ "08_Presets.scd").load;             // Load Presetsl
 (~dir ++ "09_PostProcessing-8x2.scd").load;  // KOSC -> DAC via RingMods
-(~dir ++ "99_Ringers.scd").load;             // White Walkers --- oh my!
-(~dir ++ "99_Walkers.scd").load;             // White Walkers --- oh my!
-(~dir ++ "07_MidiControl.scd").load;         // Some Midi Control
+// (~dir ++ "07_MidiControl.scd").load;         // Some Midi Control
+// (~dir ++ "10_Analytics-Master.scd").load;    // What is going on
+// (~dir ++ "99_Ringers.scd").load;             // Ring Moddders
+// (~dir ++ "99_Walkers.scd").load;             // White Walkers --- oh my!
 
 // guis ------------------------------------------------------------------------
 
@@ -44,7 +47,7 @@
 ~hyst = ~hysteresisMonitor.value(~model);
 ~pd = ~photoDesigner.value(~model);
 ~bk = ~bigKnob.value(~model);
-~hyp = ~hyperspace.value(~model)
+~hyp = ~hyperspace.value(~model, oscs: \a1b1, scale: 10)
 ~pb = ~patchbay.value(~model);
 ~pre = ~presets.value(~model);
 
@@ -59,3 +62,11 @@
 ~c1d1.run(true)
 ~a2b2.run(true)
 ~c2d2.run(true)
+
+~a1b1.run(false)
+~c1d1.run(false)
+~a2b2.run(false)
+~c2d2.run(false)
+
+s.scope
+s.meter
