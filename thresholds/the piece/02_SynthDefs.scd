@@ -22,14 +22,14 @@ Spec.add(\koscFreq, [0, 1, \linear]);
 Spec.add(\koscError, [0.5, 15, \linear]);
 Spec.add(\lowPassPot, [0, 1, \linear]);
 /* --- OSC1 --- */
-Spec.add(\koscRA, [0.1, 40, \linear]);
+Spec.add(\koscRA, [0, 40.0, \linear]);
 Spec.add(\preAmpPotA, [0, 1, \linear]);
 Spec.add(\powAmpPotA, [0, 1, \linear]);
 Spec.add(\lfoPotA, [0, 1, \linear]);
 Spec.add(\lfoCapSwitchA, [0, 1, \linear, 1]);
 Spec.add(\lfoLowPassPotA, [0, 1, \linear]);
 Spec.add(\vactrolScalarA, [0.1, 2.0, \linear]);
-Spec.add(\vactrolAttackA, [0.001, 0.3, \exp]);
+Spec.add(\vactrolAttackA, [0.001, 0.03, \exp]);
 Spec.add(\vactrolDecayA, [0.01, 3.0, \exp]);
 Spec.add(\vactrolHysteresisA, [0.0, 100.0, \linear]);
 Spec.add(\vactrolDepthA, [1.0, 6.0, \linear]);
@@ -39,18 +39,22 @@ Spec.add(\lfoGateA, [0, 1, \linear, 1]);
 // Spec.add(\fbackXA, [0, 1, \linear]);
 // Spec.add(\fbackYA, [0, 1, \linear]);
 // Spec.add(\fbackZA, [0, 1, \linear]);
-// Spec.add(\outXA, [0, 1, \linear]);
-// Spec.add(\outYA, [0, 1, \linear]);
-// Spec.add(\outZA, [0, 1, \linear]);
+Spec.add(\outXA, [0, 1, \linear]);
+Spec.add(\outYA, [0, 1, \linear]);
+Spec.add(\outZA, [0, 1, \linear]);
+
+Spec.add(\outX, [0, 1, \linear]); // need these for master params
+Spec.add(\outY, [0, 1, \linear]); // need these for master params
+Spec.add(\outZ, [0, 1, \linear]); // need these for master params
 /* --- OSC2 --- 2 */
-Spec.add(\koscRB, [0.1, 40, \linear]);
+Spec.add(\koscRB, [0, 40.0, \linear]);
 Spec.add(\preAmpPotB, [0, 1, \linear]);
 Spec.add(\powAmpPotB, [0, 1, \linear]);
 Spec.add(\lfoPotB, [0, 1, \linear]);
 Spec.add(\lfoCapSwitchB, [0, 1, \linear, 1]);
 Spec.add(\lfoLowPassPotB, [0, 1, \linear]);
 Spec.add(\vactrolScalarB, [0.1, 2.0, \linear]);
-Spec.add(\vactrolAttackB, [0.001, 0.3, \exp]);
+Spec.add(\vactrolAttackB, [0.001, 0.03, \exp]);
 Spec.add(\vactrolDecayB, [0.01, 3.0, \exp]);
 Spec.add(\vactrolHysteresisB, [0.0, 100.0, \linear]);
 Spec.add(\vactrolDepthB, [1.0, 6.0, \linear]);
@@ -60,9 +64,9 @@ Spec.add(\lfoGateB, [0, 1, \linear, 1]);
 // Spec.add(\fbackXB, [0, 1, \linear]);
 // Spec.add(\fbackYB, [0, 1, \linear]);
 // Spec.add(\fbackZB, [0, 1, \linear]);
-// Spec.add(\outXB, [0, 1, \linear]);
-// Spec.add(\outYB, [0, 1, \linear]);
-// Spec.add(\outZB, [0, 1, \linear]);
+Spec.add(\outXB, [0, 1, \linear]);
+Spec.add(\outYB, [0, 1, \linear]);
+Spec.add(\outZB, [0, 1, \linear]);
 );
 
 // synthdef
@@ -86,13 +90,13 @@ z = SynthDef(\feedbackPair, {
     // feedback path
     preAmpPotA = 0.75, preAmpPotB = 0.75, powAmpPotA = 0.9,
     powAmpPotB = 0.9, lfoPotA = 0.33, lfoPotB = 0.22, lfoCapSwitchA = 0,
-    lfoCapSwitchB = 0, lfoLowPassPotA = 0.85, lfoLowPassPotB = 0.85,
+    lfoCapSwitchB = 0, lfoLowPassPotA = 0.25, lfoLowPassPotB = 0.25,
 
-    vactrolScalarA = 1, vactrolAttackA = 0.027, vactrolDecayA = 0.3,
-    vactrolHysteresisA = 3, vactrolDepthA = 2,
+    vactrolScalarA = 1, vactrolAttackA = 0.027, vactrolDecayA = 4.0,
+    vactrolHysteresisA = 60, vactrolDepthA = 2,
 
-    vactrolScalarB = 1, vactrolAttackB = 0.023, vactrolDecayB = 0.4,
-    vactrolHysteresisB = 3, vactrolDepthB = 2,
+    vactrolScalarB = 1, vactrolAttackB = 0.023, vactrolDecayB = 3.5,
+    vactrolHysteresisB = 60, vactrolDepthB = 2,
 
     lfoPulseWidthA = 0.5, lfoPulseWidthB = 0.5,
 
@@ -102,8 +106,8 @@ z = SynthDef(\feedbackPair, {
     lfoGateA = 1, lfoGateB = 1,
 
     // outs
-    fbackXA = 0, fbackYA = 1, fbackZA = 0, outXA = 1, outYA = 1, outZA = 0,
-    fbackXB = 0, fbackYB = 1, fbackZB = 0, outXB = 1, outYB = 1, outZB = 0;
+    fbackXA = 0, fbackYA = 1, fbackZA = 0, outXA = 0, outYA = 1, outZA = 0,
+    fbackXB = 0, fbackYB = 1, fbackZB = 0, outXB = 0, outYB = 1, outZB = 0;
 
     // vars
     var sigMixedIn, sigLP, lfoSigA, lfoSigLPA, sigMix2A, sigPreAmpA, rNetInA,
@@ -113,12 +117,12 @@ z = SynthDef(\feedbackPair, {
     /*----------------------------------------------------------------*/
 
     // smooth input
-    koscRA = Lag.ar(K2A.ar(koscRA), lagTime: 0.3);  // *ar for audio rate moduation r; otherwise k2a at DunnOsc
-    koscRB = Lag.ar(K2A.ar(koscRB), lagTime: 0.3);  // *ar for audio rate moduation r; otherwise k2a at DunnOsc
-    preAmpPotA = Lag.kr(preAmpPotA, lagTime: 0.3);
-    preAmpPotB = Lag.kr(preAmpPotB, lagTime: 0.3);
-    powAmpPotA = Lag.kr(powAmpPotA, lagTime: 0.3);
-    powAmpPotB = Lag.kr(powAmpPotB, lagTime: 0.3);
+    koscRA = Lag.ar(K2A.ar(koscRA), lagTime: 0.1);  // *ar for audio rate moduation r; otherwise k2a at DunnOsc
+    koscRB = Lag.ar(K2A.ar(koscRB), lagTime: 0.1);  // *ar for audio rate moduation r; otherwise k2a at DunnOsc
+    preAmpPotA = Lag.kr(preAmpPotA, lagTime: 0.1);
+    preAmpPotB = Lag.kr(preAmpPotB, lagTime: 0.1);
+    powAmpPotA = Lag.kr(powAmpPotA, lagTime: 0.1);
+    powAmpPotB = Lag.kr(powAmpPotB, lagTime: 0.1);
 
     // [0] mixed input
     sigMixedIn = LocalIn.ar(1);
@@ -169,8 +173,8 @@ z = SynthDef(\feedbackPair, {
     koscA = DunnOsc.ar(r: ResistorsParallel.ar(sigVtrolA[0], koscRA), freq: koscFreq, error: koscError) * [1,3,1] * koscGateA; // Y SCALE FIX;
     koscB = DunnOsc.ar(r: ResistorsParallel.ar(sigVtrolB[0], koscRB), freq: koscFreq, error: koscError) * [1,3,1] * koscGateB; // Y SCALE FIX;
 
-    koscA = LeakDC.ar(koscA);
-    koscB = LeakDC.ar(koscB);
+    // koscA = LeakDC.ar(koscA);
+    // koscB = LeakDC.ar(koscB);
 
     // [9] mixed out
     sigMixedOut = Mixer741.ar([(koscA*[fbackXA,fbackYA,fbackZA]).sum, (koscB*[fbackXB,fbackYB,fbackZB]).sum]);
