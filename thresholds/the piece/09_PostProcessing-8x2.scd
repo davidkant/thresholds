@@ -1,57 +1,57 @@
-/*--|----1----|----2----|----3----|----4----|----5----|----6----|----7----|----8
+/*--|----1----|----2----|----3----|----4----|----5----|----6----|----7----|----8*/
 
- Super sketchy quick implementation of some post-processing. Just filling in
- for now -- this is going to change.
 
- todo
- -> should be length of out busses . rand not hardcoded to 8.rand
+/* stereo each pair */
 
-*/
+SynthDef(\PairStereo, {arg inBusA, inBusB, outBus, outPos = 0, vol = 1.0;
 
-"09: Loading Post-Processing for 8x2...".postln;
-
-(
-SynthDef(\ringer, {arg inBusA, inBusB, outPos, atk=0.0, rel=0.0, amp=0.05,
-    pan=1, dur=1, mute=1;
-
-    var sig, env;
-
-    sig = InFeedback.ar(inBusA) * InFeedback.ar(inBusB);
-    env = EnvGen.kr(Env.new([0,1,1,0], [atk,dur,rel],[1,-1]), doneAction: 2);
-    sig = sig * env;
-
-    Out.ar(0, Pan2.ar(sig * 0.5 * mute, pos:outPos));
+    Out.ar(0, vol * [InFeedback.ar(inBusA), InFeedback.ar(inBusB)]);
 
 }).add;
-);
 
-/*--|----1----|----2----|----3----|----4----|----5----|----6----|----7----|----8
+/* sum each pair to mono */
 
- stereo each pair
+SynthDef(\PairMono, {arg inBusA, inBusB, outBus, outPos = 0, vol = 1.0;
 
-*/
-
-(
-SynthDef(\StereoPair, {arg inBusA, inBusB, outBus;
-
-    Out.ar(0, [InFeedback.ar(inBusA), InFeedback.ar(inBusB)]);
+    Out.ar(0, vol * (Pan2.ar((InFeedback.ar(inBusA) + InFeedback.ar(inBusB)), pos:outPos)));
 
 }).add;
-);
 
-/*--|----1----|----2----|----3----|----4----|----5----|----6----|----7----|----8
 
- ringmod each pair to mono
+/* ringmod each pair to mono */
 
-*/
+SynthDef(\PairRinger, {arg inBusA, inBusB, outBus = 0, outPos = 0, vol = 1.0;
 
-(
-SynthDef(\PairRinger, {arg inBusA, inBusB, outBus = 0, outPos = 0;
-
-    Out.ar(0, Pan2.ar(InFeedback.ar(inBusA) * InFeedback.ar(inBusB), pos:outPos));
+    Out.ar(outBus, vol * (Pan2.ar(InFeedback.ar(inBusA) * InFeedback.ar(inBusB), pos:outPos)));
 
 }).add;
-);
+
+SynthDef(\PairRinger1, {arg inBusA, inBusB, outBus = 0, outPos = 0, vol = 1.0;
+
+    Out.ar(outBus, vol * (Pan2.ar(InFeedback.ar(inBusA) ring1: InFeedback.ar(inBusB), pos:outPos)));
+
+}).add;
+
+SynthDef(\PairRinger2, {arg inBusA, inBusB, outBus = 0, outPos = 0, vol = 1.0;
+
+    Out.ar(outBus, vol * (Pan2.ar(InFeedback.ar(inBusA) ring2: InFeedback.ar(inBusB), pos:outPos)));
+
+}).add;
+
+/* ringmod each pair to stereo */
+
+SynthDef(\PairRingerStereo, {arg inBusA, inBusB, outBus = 0, outPos = 0, vol = 1.0;
+
+    var a, b;
+
+    a = vol * InFeedback.ar(inBusA);
+    b = vol * InFeedback.ar(inBusB);
+
+    Out.ar(outBus, a);
+    Out.ar(outBus+1, b);
+    Out.ar(outBus, Pan2.ar(a*b, pos:0));
+
+}).add;
 
 // return
-"+++++++++"
+"09: Post-Processing Loaded for 8x2!"
