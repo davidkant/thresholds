@@ -28,6 +28,7 @@
 (
 ~model = ();
 ~model.synths = ~synths;
+~model.stereoMix = ~stereoMix;
 ~model.mixedOutBusses = ~mixedOutBusses;
 ~model.scopeBusses = ~scopeBusses;
 ~model.lfoScopeBusses = ~lfoScopeBusses;
@@ -39,6 +40,7 @@
 ~model.flags = 3.collect({8.collect({0})});  // [ringer][channel]
 ~model.masterParams = Dictionary.new;
 ~model.dir = ~dir;
+~model.patchSynths = ~model.synths.collect({nil});
 );
 
 // guis
@@ -57,15 +59,65 @@
     ["~pre",    "~presets.value(~model)",             "~presets",        \preset],
 ]);
 
+(
+~model.pairedParams = [\koscFreq, \koscError, \lowPassPot];
+~model.synthFromIndex = {|self, index| self.synths[index.div(2)]};
+~model.aorb = {|self, index| [\A,\B][index % 2]};
+);
+
+
+// converters
+(
+~model.pairedParamToSingleParam = {arg self, param;
+
+    if (param.asString.endsWith("A") || param.asString.endsWith("B"),
+        {param.asString[0..param.asString.size-2].asSymbol},
+        {param}
+    );
+
+});
+
+(
+~model.singleParamToPairedParam = {arg self, param, index;
+
+    if (self.pairedParams.includes(param), {param}, {(param ++ self.aorb(index)).asSymbol});
+
+});
+
+// set synths param with a function
+(
+~model.setSynthsWithFunc = {arg self, synthsIndex, param, func;
+
+    // synthsIndex.postln;
+    param.postln;
+
+    // loop through synthsIndex
+    synthsIndex.do({|index|
+
+        var synth, aorb;
+
+        // synth and aorb
+        synth = self.synthFromIndex(index);
+        aorb = if (self.pairedParams.includes(param)) {''} {self.aorb(index)};
+
+        // set synth
+        if (synth.notNil) {
+            self.setSynth(synth, (param ++ aorb).asSymbol, func.value());
+        }
+
+    });
+});
+
+
 // set synth param Controller function
 (
-~model.setSynth = { arg self, synth, param, value;
+~model.setSynth = { arg self, synth, param, value, whoChangedIt;
 
     // set synth
     if (synth.notNil) {synth.set(param, value)};
 
     // notify dependants
-    self.changed(\setSynth, ~model.synthsIndex[synth], param, value, synth); // synth should really be the first arg
+    self.changed(\setSynth, ~model.synthsIndex[synth], param, value, synth, whoChangedIt); // synth should really be the first arg
 
 });
 
@@ -75,6 +127,18 @@
 
     // notify dependants
     self.changed(\setSynth, ~model.synthsIndex[synth], param, value, synth);  // synth should really be the first arg
+
+});
+
+// used for inits
+(
+~model.initGUIsforParam = { arg self, synth, param;
+
+    synth.get(param, { |value| {
+
+        self.changed(\setSynth, ~model.synthsIndex[synth], param, value, synth);  // synth should really be the first arg
+
+    }.defer});
 
 });
 
@@ -89,8 +153,8 @@
     self.synths.do({|synth|
 
         if (synth.notNil) {
-            self.setSynth(synth, param ++ \A, value);
-            self.setSynth(synth, param ++ \B, value);
+            self.setSynth(synth, (param ++ \A).asSymbol, value, whoChangedIt);
+            self.setSynth(synth, (param ++ \B).asSymbol, value, whoChangedIt);
         }
 
     });
@@ -99,7 +163,7 @@
     self.synths.do({|synth|
 
         if (synth.notNil) {
-            self.setSynth(synth, param, value);
+            self.setSynth(synth, param, value, whoChangedIt);
         }
 
     });
