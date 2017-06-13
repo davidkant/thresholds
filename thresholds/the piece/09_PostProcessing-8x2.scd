@@ -1,5 +1,65 @@
-/*--|----1----|----2----|----3----|----4----|----5----|----6----|----7----|----8*/
 
+/*--|----1----|----2----|----3----|----4----|----5----|----6----|----7----|----8
+
+ Main Output Synths Stereo --- these patch stereoMix through to the to DAC~
+
+*/
+
+/* none */
+
+SynthDef(\MainChannelNone, {
+
+    Out.ar(0, InFeedback.ar(~stereoMix, 2));
+
+}).add;
+
+/* DC block */
+
+SynthDef(\MainChannelDCBlock, {
+
+    Out.ar(0, LeakDC.ar(InFeedback.ar(~stereoMix, 2)));
+
+}).add;
+
+/* hard clip */
+
+SynthDef(\MainChannelClip, {
+
+    Out.ar(0, Clip.ar(InFeedback.ar(~stereoMix, 2), -1, 1));
+
+}).add;
+
+/* tanh compression */
+
+// allocate buffer
+~tanhBuff = Buffer.alloc(s, 1024, 1);
+
+// computer tanh buffer
+~tanhSig = Signal.fill(513, {|i| i.linlin(0.0, 512.0, -2.0, 2.0).tanh});
+
+// send to server as wavetable
+~tanhBuff.sendCollection(~tanhSig.asWavetableNoWrap);
+
+// shaper synth
+SynthDef(\MainChannelTanh, {
+
+    Out.ar(0, Shaper.ar(~tanhBuff, InFeedback.ar(~stereoMix, 2)));
+
+}).add;
+
+/*--|----1----|----2----|----3----|----4----|----5----|----6----|----7----|----8
+
+ launch mainChannelSynth to stereo DAC~ so we have sound!
+
+*/
+
+~model.mainChannelSynth = Synth(\MainChannelDCBlock);
+
+/*--|----1----|----2----|----3----|----4----|----5----|----6----|----7----|----8
+
+ Patchbay Synths --- these patch from oscillators through to stereoMix
+
+*/
 
 /* stereo each pair */
 
