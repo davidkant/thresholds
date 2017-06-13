@@ -11,7 +11,10 @@
 
 (
 
-// mixed output busses          <-- pairiScope assumes contiguous
+// main output mix
+~stereoMix = Bus.audio(s, 2);
+
+// mixed output busses <-- note: pairiScope assumes contiguous
 ~mixedOutA1 = Bus.audio(s, 1);
 ~mixedOutB1 = Bus.audio(s, 1);
 ~mixedOutC1 = Bus.audio(s, 1);
