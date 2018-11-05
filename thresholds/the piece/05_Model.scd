@@ -49,19 +49,19 @@
 // guis
 (
 ~model.guiList = [
+    ["~vecView", "~vectorView.value(~model)",          "~vectorView",     \master],
     ["~pairi",   "~pairiScope.value(~model)",          "~pairiScope",     \pair],
     ["~octo",    "~octoScope.value(~model)",           "~octoScope",      \master],
     ["~lp",      "~lowPassScope.value(~model)",        "~lowPassScope",   \master],
-    ["~atr",     "~attractors.value(~model, style:2)", "~attractors",     \master],
     ["~lfo",     "~lfoScope.value(~model)",            "~lfoScope",       \master],
     ["~hyst",    "~hysteresisMonitor.value(~model)",   "~hysterMon",      \master],
     ["~pd",      "~photoDesigner.value(~model)",       "~photoDesigner",  \master],
     ["~bk",      "~bigKnob.value(~model)",             "~bigKnob",        \master],
-    ["~hyp",     "~hyperspace.value(~model)",          "~hypersapce",     \master],
-    ["~pb",      "~patchbay.value(~model)",            "~patchbay",       \post],
     ["~tm",      "~timeWarp.value(~model)",            "~timeWarp",       \master],
-    ["~vecView", "~vectorView.value(~model)",          "~vectorView",     \master],
+    ["~atr",     "~attractors.value(~model, style:2)", "~attractors",     \master],
+    ["~hyp",     "~hyperspace.value(~model)",          "~hypersapce",     \master],
     ["~tn",      "~tone.value(~model)",                "~tone",           \master],
+    ["~pb",      "~patchbay.value(~model)",            "~patchbay",       \post],
     ["~pre",     "~presets.value(~model)",             "~presets",        \preset],
 ]);
 

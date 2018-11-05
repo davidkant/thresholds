@@ -1712,7 +1712,7 @@ SynthDef(\vactrolLED, { |inBus, outBus| Out.kr(outBus, LagUD.kr(A2K.kr(InFeedbac
 */
 
 (
-~hyperspace = {|model, oscs=\all, scale=14|
+~hyperspace = {|model, oscs=\all, scale=7|
 
     var self = ();
 
