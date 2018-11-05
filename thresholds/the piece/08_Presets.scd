@@ -23,7 +23,7 @@
 (
 
 /* where to read archive from disk */
-Archive.archiveDir_(~model.dir);
+Archive.archiveDir_(~model.archive_dir);
 
 /* read the archive */
 Archive.read();
@@ -64,7 +64,16 @@ Archive.read();
 (
 ~setParamsDict =  { |synth, preset|
 
-    preset.keysValuesDo { |key,value| ~model.setSynth(synth, key, value) };
+    preset.keysValuesDo { |key,value|
+
+        // don't load busses!
+        if (key.asString.contains("Bus").not,
+            {~model.setSynth(synth, key, value);},
+            // {key.postln;}
+        );
+
+    };
+
 }
 );
 
