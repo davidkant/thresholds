@@ -29,6 +29,8 @@
 ~model = ();
 ~model.synths = ~synths;
 ~model.stereoMix = ~stereoMix;
+~model.quadMix = ~quadMix;
+~model.mainOut = ~mainOut;
 ~model.mixedOutBusses = ~mixedOutBusses;
 ~model.scopeBusses = ~scopeBusses;
 ~model.lfoScopeBusses = ~lfoScopeBusses;
@@ -40,23 +42,27 @@
 ~model.flags = 3.collect({8.collect({0})});  // [ringer][channel]
 ~model.masterParams = Dictionary.new;
 ~model.dir = ~dir;
+~model.archive_dir = ~dir;
 ~model.patchSynths = ~model.synths.collect({nil});
 );
 
 // guis
 (
 ~model.guiList = [
-    ["~pairi",  "~pairiScope.value(~model)",          "~pairiScope",     \pair],
-    ["~octo",   "~octoScope.value(~model)",           "~octoScope",      \master],
-    ["~lp",     "~lowPassScope.value(~model)",        "~lowPassScope",   \master],
-    ["~atr",    "~attractors.value(~model, style:2)", "~attractors",     \master],
-    ["~lfo",    "~lfoScope.value(~model)",            "~lfoScope",       \master],
-    ["~hyst",   "~hysteresisMonitor.value(~model)",   "~hysterMon",      \master],
-    ["~pd",     "~photoDesigner.value(~model)",       "~photoDesigner",  \master],
-    ["~bk",     "~bigKnob.value(~model)",             "~bigKnob",        \master],
-    ["~hyp",    "~hyperspace.value(~model)",          "~hypersapce",     \master],
-    ["~pb",     "~patchbay.value(~model)",            "~patchbay",       \post],
-    ["~pre",    "~presets.value(~model)",             "~presets",        \preset],
+    ["~pairi",   "~pairiScope.value(~model)",          "~pairiScope",     \pair],
+    ["~octo",    "~octoScope.value(~model)",           "~octoScope",      \master],
+    ["~lp",      "~lowPassScope.value(~model)",        "~lowPassScope",   \master],
+    ["~atr",     "~attractors.value(~model, style:2)", "~attractors",     \master],
+    ["~lfo",     "~lfoScope.value(~model)",            "~lfoScope",       \master],
+    ["~hyst",    "~hysteresisMonitor.value(~model)",   "~hysterMon",      \master],
+    ["~pd",      "~photoDesigner.value(~model)",       "~photoDesigner",  \master],
+    ["~bk",      "~bigKnob.value(~model)",             "~bigKnob",        \master],
+    ["~hyp",     "~hyperspace.value(~model)",          "~hypersapce",     \master],
+    ["~pb",      "~patchbay.value(~model)",            "~patchbay",       \post],
+    ["~tm",      "~timeWarp.value(~model)",            "~timeWarp",       \master],
+    ["~vecView", "~vectorView.value(~model)",          "~vectorView",     \master],
+    ["~tn",      "~tone.value(~model)",                "~tone",           \master],
+    ["~pre",     "~presets.value(~model)",             "~presets",        \preset],
 ]);
 
 (
@@ -69,20 +75,29 @@
 // converters
 (
 ~model.pairedParamToSingleParam = {arg self, param;
-
     if (param.asString.endsWith("A") || param.asString.endsWith("B"),
         {param.asString[0..param.asString.size-2].asSymbol},
         {param}
     );
-
 });
 
 (
 ~model.singleParamToPairedParam = {arg self, param, index;
-
     if (self.pairedParams.includes(param), {param}, {(param ++ self.aorb(index)).asSymbol});
-
 });
+
+// this does same thing as singleParamToPairedParam but better name -> remove other
+(
+~model.rawParamToIndividualParam = {arg self, param, index;
+    if (self.pairedParams.includes(param), {param}, {(param ++ self.aorb(index)).asSymbol});
+});
+
+(
+~model.rawParamToMasterParam = {arg self, param, index;
+    if (self.pairedParams.includes(param), {param}, {(param ++ \AB).asSymbol});
+});
+
+
 
 // set synths param with a function
 (
@@ -121,6 +136,7 @@
 
 });
 
+
 // used for inits
 (
 ~model.setSynthJustDependants = { arg self, synth, param, value;
@@ -146,8 +162,9 @@
 // set master synth param Controller function
 // this notifies individual dependants as well
 // via ~model.setSynth
+/*
 (
-~model.setSynthMaster = { arg self, param, value, whoChangedIt;
+~model. = { arg self, param, value, whoChangedIt;
 
     // set ALL synths both A and B
     self.synths.do({|synth|
@@ -175,6 +192,34 @@
     self.changed(\setSynthMaster, param, value, whoChangedIt);
 
 });
+*/
+
+(
+~model.setSynthMaster = { arg self, param, value, whoChangedIt;
+
+    if (param.asString.endsWith("AB"), {
+        self.synths.do({|synth|
+            if (synth.notNil) {
+                self.setSynth(synth, (param.asString.rotate(2)[2..] ++ \A).asSymbol, value, whoChangedIt);
+                self.setSynth(synth, (param.asString.rotate(2)[2..] ++ \B).asSymbol, value, whoChangedIt);
+            };
+        });
+    },{
+        self.synths.do({|synth|
+            if (synth.notNil) {
+                self.setSynth(synth, param, value, whoChangedIt);
+            };
+        });
+    });
+
+    // store internal copy
+    self.masterParams.add((param ++ \Master).asSymbol -> value);
+
+    // notify dependants MASTER
+    self.changed(\setSynthMaster, param, value, whoChangedIt);
+
+});
+
 
 // used for inits
 (
