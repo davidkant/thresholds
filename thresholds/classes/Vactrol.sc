@@ -63,7 +63,7 @@ Vactrol {
         out = this.v2r(in, ambientLight);
 
         // [2] lag
-        out = this.lag(out, attack, decay);
+        out = this.lag10(out, attack, decay);
 
         // [3] hysteresis
         out = this.hysteresis(out, time: hysteresis, base: depth);
@@ -82,7 +82,7 @@ Vactrol {
         out = this.v2r(in, ambientLight);
 
         // [2] lag
-        out = this.lag(out, attack, decay);
+        out = this.lag10(out, attack, decay);
 
         // [3] hysteresis
         hyst = this.hysteresisMonitor(out, time: hysteresis, base: depth);
@@ -101,7 +101,7 @@ Vactrol {
         led = this.v2r(in, ambientLight);
 
         // [2] lag
-        hyst = this.lag(led, attack, decay);
+        hyst = this.lag10(led, attack, decay); // normal lag back to for now
 
         // [3] hysteresis
         hyst = this.hysteresisMonitor(hyst, time: hysteresis, base: depth);
@@ -109,6 +109,24 @@ Vactrol {
         // [4] out: post-hysteresis, internal state, led
         ^[hyst[0], hyst[1], LinLin.ar(led/109, 0,1,1,0)];
         // ^[hyst[0], hyst[1], in];
+	}
+
+    *pdplot { |in = 0, attack = 0.030, decay = 2.0, hysteresis = 10, depth = 2,
+        ambientLight = 110.0, mul = 1, add = 0|
+
+        var out;
+
+        // [1] voltage to resistance
+        out = this.v2r(in, ambientLight);
+
+        // [2] lag
+        out = this.lag(out, attack, decay);
+
+        // [3] hysteresis
+        out = this.hysteresis(out, time: hysteresis, base: depth);
+
+        // [4] out
+        ^out;
 	}
 
 
@@ -122,16 +140,42 @@ Vactrol {
             [8.0, 2.94], [9.0, 2.56]];*/
 
         // vactrol #1
-        pairs = [[0.0, 110.0], [1.0, 110.0], [1.9, 91.0], [2.0, 64.0],
+        /* pairs = [[0.0, 110.0], [1.0, 110.0], [1.9, 91.0], [2.0, 64.0],
             [3.0, 8.24], [4.0, 4.00], [5.0, 2.79], [6.0, 2.18], [7.0, 1.83],
             [8.0, 1.59], [9.0, 1.42], [10.0, 1.29], [11.0, 1.20], [12.0, 1.12],
-            [13.0, 1.05], [14.0, 0.99], [15.0, 0.94]];
+            [13.0, 1.05], [14.0, 0.99], [15.0, 0.94]];*/
+
+        pairs = [[0.0, 110.0], [1.0, 110.0], [1.9, 91.0], [2.0, 64.0],
+            [3.0, 30.24], [4.0, 15.00], [5.0, 5.79], [6.0, 3.18], [7.0, 1.83],
+            [8.0, 1.59], [9.0, 1.42], [10.0, 1.29], [11.0, 1.20], [12.0, 1.12],
+        [13.0, 1.05], [14.0, 0.99], [15.0, 0.94]];
 
         // interpolation curves
         curves = [1 ,1, 1, -2, -1, -1, -1, -1, -1, -1, -1];
 
+        // vactrol #3 MOTU test (actual v are lower)
+        /* pairs = [
+            [0.0, 200.0],
+            [1.0, 200.0],
+            [2.0, 200.0],
+            [2.25, 75.8],
+            [2.50, 38.9],
+            [2.75, 24.5],
+            [3.0, 17.46],
+            [4.0, 7.95],
+            [5.0, 5.23],
+            [6.0, 3.98],
+            [7.0, 3.26],
+            [8.0, 2.80],
+            [9.0, 2.48],
+            [10.0, 2.24],
+            [10.89, 2.07]
+        ];*/
+
+        // curves = -1;
+
         // half-wave rectify
-        out = Clip.ar(in, lo: 0, hi: 1);
+        out = Clip.ar(in, lo: 0, hi: 40/9);
 
         // scale input to 9v and impose response curve and clip to ambient light
         ^Clip.ar(IEnvGen.ar(Env.pairs(pairs, curves), out * 9.0), 0, ambientLight)
@@ -142,8 +186,14 @@ Vactrol {
 
         // asymmetric lag (time in seconds)
         ^LagUD.ar(resistance, decay, attack);
+
     }
 
+    *lag10 { |resistance, attack, decay|
+
+        // asymmetric lag (time in seconds)
+        ^LagUD.ar(resistance.linlin(0.94, 110.0, 0.0, 1.0), decay, attack*10).pow(10).linlin(0.0, 1.0, 0.94, 110.0);
+    }
 
     *hysteresis { |in = 0, time = 1, base = 2|
 
