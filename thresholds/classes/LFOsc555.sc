@@ -36,7 +36,7 @@
 
 LFOsc555 {
 
-    *ar { |val = 0.5, cswitch = 0, potRmin = 1, potRmax = 1e6, width = 0.1
+    *ar { |val = 0.5, cswitch = 0, potRmin = 1, potRmax = 1e6, width = 0.1, iphase = 0.0,
         r1 = 1e3, c1 = 10.0e-6, c2 = 0.22e-6, mul = 1, add = 0|
 
         var r2, c, freq;
@@ -51,6 +51,6 @@ LFOsc555 {
         freq = 1.44 / ( (r1 + (2 * r2) ) * c);
 
         // lfo
-        ^LFPulse.ar(freq, width: width);
+        ^LFPulse.ar(freq, iphase: iphase, width: width);
     }
 }
