@@ -18,14 +18,15 @@
 // control spec
 (
 /* --- GLOBAL --- */
-Spec.add(\koscFreq, [0, 1, \linear]);
+Spec.add(\koscFreq, [0.75, 0.9, \linear]);
 Spec.add(\koscError, [0.5, 15, \linear]);
 Spec.add(\lowPassPot, [0, 1, \linear]);
 /* --- OSC1 --- */
-Spec.add(\koscRA, [0, 40.0, \linear]);
+Spec.add(\koscRA, [2, 50.0, \exp]);
 Spec.add(\preAmpPotA, [0, 1, \linear]);
 Spec.add(\powAmpPotA, [0, 1, \linear]);
-Spec.add(\lfoPotA, [0, 1, \linear]);
+Spec.add(\lfoPotA, [0.1, 1, \linear]);
+Spec.add(\lfoIPhaseA, [0, 1, \linear]);
 Spec.add(\lfoCapSwitchA, [0, 1, \linear, 1]);
 Spec.add(\lfoLowPassPotA, [0, 1, \linear]);
 Spec.add(\vactrolScalarA, [0.1, 2.0, \linear]);
@@ -43,14 +44,12 @@ Spec.add(\outXA, [0, 1, \linear]);
 Spec.add(\outYA, [0, 1, \linear]);
 Spec.add(\outZA, [0, 1, \linear]);
 
-Spec.add(\outX, [0, 1, \linear]); // need these for master params
-Spec.add(\outY, [0, 1, \linear]); // need these for master params
-Spec.add(\outZ, [0, 1, \linear]); // need these for master params
 /* --- OSC2 --- 2 */
-Spec.add(\koscRB, [0, 40.0, \linear]);
+Spec.add(\koscRB, [2, 50.0, \exp]);
 Spec.add(\preAmpPotB, [0, 1, \linear]);
 Spec.add(\powAmpPotB, [0, 1, \linear]);
-Spec.add(\lfoPotB, [0, 1, \linear]);
+Spec.add(\lfoPotB, [0.1, 1, \linear]);
+Spec.add(\lfoIPhaseB, [0, 1, \linear]);
 Spec.add(\lfoCapSwitchB, [0, 1, \linear, 1]);
 Spec.add(\lfoLowPassPotB, [0, 1, \linear]);
 Spec.add(\vactrolScalarB, [0.1, 2.0, \linear]);
@@ -67,6 +66,29 @@ Spec.add(\lfoGateB, [0, 1, \linear, 1]);
 Spec.add(\outXB, [0, 1, \linear]);
 Spec.add(\outYB, [0, 1, \linear]);
 Spec.add(\outZB, [0, 1, \linear]);
+
+/* --- global specs --- */
+
+Spec.add(\koscRAB, [0.1, 40.0, \exp]);
+Spec.add(\preAmpPotAB, [0, 1, \linear]);
+Spec.add(\powAmpPotAB, [0, 1, \linear]);
+Spec.add(\lfoPotAB, [0.1, 1, \linear]);
+Spec.add(\lfoCapSwitchAB, [0, 1, \linear, 1]);
+Spec.add(\lfoLowPassPotAB, [0, 1, \linear]);
+Spec.add(\vactrolScalarAB, [0.1, 2.0, \linear]);
+Spec.add(\vactrolAttackAB, [0.001, 0.3, \exp]);
+Spec.add(\vactrolDecayAB, [0.01, 3.0, \exp]);
+Spec.add(\vactrolHysteresisAB, [0.0, 100.0, \linear]);
+Spec.add(\vactrolDepthAB, [1.0, 6.0, \linear]);
+Spec.add(\koscGateAB, [0, 1, \linear, 1]);
+Spec.add(\vactrolGateAB, [0, 1, \linear, 1]);
+Spec.add(\lfoGateAB, [0, 1, \linear, 1]);
+Spec.add(\fbackXAB, [0, 1, \linear]);
+Spec.add(\fbackYAB, [0, 1, \linear]);
+Spec.add(\fbackZAB, [0, 1, \linear]);
+Spec.add(\outXAB, [0, 1, \linear]);
+Spec.add(\outYAB, [0, 1, \linear]);
+Spec.add(\outZAB, [0, 1, \linear]);
 );
 
 // synthdef
@@ -84,18 +106,20 @@ z = SynthDef(\feedbackPair, {
     otherIn,
 
     // kosc
-    koscRA = 18.6, koscRB = 18.6, koscFreq = 0.85, koscError = 4.0,
+    koscRA = 18.6, koscRB = 18.6, koscFreq = 0.85, koscError = 2.0,
     lowPassPot = 0.85,
+
+    lfoIPhaseA = 0, lfoIPhaseB = 0,
 
     // feedback path
     preAmpPotA = 0.75, preAmpPotB = 0.75, powAmpPotA = 0.9,
     powAmpPotB = 0.9, lfoPotA = 0.33, lfoPotB = 0.22, lfoCapSwitchA = 0,
     lfoCapSwitchB = 0, lfoLowPassPotA = 0.25, lfoLowPassPotB = 0.25,
 
-    vactrolScalarA = 1, vactrolAttackA = 0.027, vactrolDecayA = 4.0,
+    vactrolScalarA = 1, vactrolAttackA = 0.01, vactrolDecayA = 4.0,
     vactrolHysteresisA = 60, vactrolDepthA = 2,
 
-    vactrolScalarB = 1, vactrolAttackB = 0.023, vactrolDecayB = 3.5,
+    vactrolScalarB = 1, vactrolAttackB = 0.007, vactrolDecayB = 3.5,
     vactrolHysteresisB = 60, vactrolDepthB = 2,
 
     lfoPulseWidthA = 0.5, lfoPulseWidthB = 0.5,
@@ -135,10 +159,10 @@ z = SynthDef(\feedbackPair, {
     sigLP = LowPass741.ar(sigMixedIn, (1-lowPassPot)); //.scope(name:"lowpass");
 
     // [2] lfo
-    lfoSigA = LFOsc555.ar(lfoPotA, cswitch: lfoCapSwitchA, width: lfoPulseWidthA);
+    lfoSigA = LFOsc555.ar(lfoPotA, cswitch: lfoCapSwitchA, width: lfoPulseWidthA, iphase: lfoIPhaseA);
     lfoSigLPA = LowPass741.ar(lfoSigA, (1-lfoLowPassPotA));
 
-    lfoSigB = LFOsc555.ar(lfoPotB, cswitch: lfoCapSwitchB, width: lfoPulseWidthB);
+    lfoSigB = LFOsc555.ar(lfoPotB, cswitch: lfoCapSwitchB, width: lfoPulseWidthB, iphase: lfoIPhaseB);
     lfoSigLPB = LowPass741.ar(lfoSigB, (1-lfoLowPassPotB));
 
     // [3] mixer
@@ -163,6 +187,9 @@ z = SynthDef(\feedbackPair, {
     sigTformB = Transformer1380.ar(sigPowAmpB); //.scope(name:"transformer");
 
     // [7] vactrol
+    // sigVtrolA = vactrolScalarA * VactrolShack.ledMonitor(sigTformA, attack: vactrolAttackA, decay: vactrolDecayA, hysteresis: vactrolHysteresisA, depth: vactrolDepthA); //.poll();
+    // sigVtrolB = vactrolScalarB * VactrolShack.ledMonitor(sigTformB, attack: vactrolAttackB, decay: vactrolDecayB, hysteresis: vactrolHysteresisB, depth: vactrolDepthB); //.poll();
+
     sigVtrolA = vactrolScalarA * Vactrol.ledMonitor(sigTformA, attack: vactrolAttackA, decay: vactrolDecayA, hysteresis: vactrolHysteresisA, depth: vactrolDepthA); //.poll();
     sigVtrolB = vactrolScalarB * Vactrol.ledMonitor(sigTformB, attack: vactrolAttackB, decay: vactrolDecayB, hysteresis: vactrolHysteresisB, depth: vactrolDepthB); //.poll();
 
