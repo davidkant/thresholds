@@ -4,7 +4,7 @@
 
  * do i want all scopes to have same xZoom?
  * some consistent formatting like and padding border?
- * this synth index stuff ...
+ * this synth index sanimationtuff ...
 
  RE-DESIGN
  -> abstract out functions to reuse like makeScope
@@ -140,6 +140,7 @@
         channel.rSlider = Knob(channel.container, Rect(0, 95, 45, 45));
         channel.rSlider.color_(channel.rSlider.color.put(1, Color.grey));
         channel.rSlider.action_({|slider| if (channel.msynth.notNil) {model.setSynth(channel.msynth, (\koscR ++ channel.aorb).asSymbol, (\koscR ++ channel.aorb).asSymbol.asSpec.map(slider.value))}});
+        // channel.rSlider.mode_(\vert).step_(0.002).shift_scale_(0.01);
 
         // kosc r numbox
         channel.rNumber = NumberBox(channel.container, Rect(55, 95+12, 50, 20))
@@ -828,20 +829,27 @@ offset
 
  controls what you hear... super just sketch so i can get some basic control now.
 
- these post processin GUIS define and launch their own synths but still would like
- to keep track of them on window close etc. need something to persist in the model
- but don't want to hardcode it in. maybe these guys can add stuff to the model
- dynamicall and on load check for it. that's nice. do this later.
+ note: requires moel to keep a list patchSynths w/ defauly values nil meaning off
+ could init channels over model.patchSynths to keep consistent w/ it
 
- -> have internal state variable that is separate from button val
-
- -> need to keep track of the synth somewhere so you can free it after close
+ todo: should really be using Nodes for these things for hot swapping
 
 */
+
 (
 ~patchbay = {|model|
 
     var self = ();
+
+    // synths
+    self.patchList = [
+        \PairMono,
+        \PairStereo,
+        \PairRinger,
+        \PairRinger1,
+        \PairRinger2,
+        \PairRingerStereo
+    ];
 
     // formatting
     self.buttonWidth = 60;
@@ -849,11 +857,17 @@ offset
     self.paddingBetween = 10;
     self.paddingFromEdge = 10;
 
+    // main out
+    self.outBus = model.stereoMix;
+
     // window
-    self.win = Window.new('patchbay', Rect(100, 500, 290, 60))
+    self.win = Window.new('patchbay', Rect(100, 500, 290, 300))
     .front.alwaysOnTop_(true)
     .background_(Color.black)
-    .drawFunc_({Pen.strokeColor_(Color.white).width_(2).strokeRect(Rect(0, 0, 290, 60).insetBy(2,2))});
+    .drawFunc_({
+        Pen.strokeColor_(Color.white).width_(2).strokeRect(self.win.bounds.moveTo(0,0).insetBy(2,2));
+        Pen.line(10@60, (self.win.bounds.width-10)@60).strokeColor_(Color.white).stroke();
+    });
 
     // init channels 1 for each synth
     self.channels = model.synths.collect({()});
@@ -867,6 +881,9 @@ offset
         // synth
         channel.msynth = synth;
 
+        // index
+        channel.index = i;
+
         // channel container
         channel.container = CompositeView(self.win, Rect(
             i*(self.buttonWidth+self.paddingBetween)+self.paddingFromEdge,
@@ -874,24 +891,69 @@ offset
             self.buttonWidth,
             self.buttonHeight));
 
+        // busses
+        channel.inBusA = model.mixedOutBusses[2*i];
+        channel.inBusB = model.mixedOutBusses[2*i+1];
+
         // button
         channel.button = Button(channel.container, Rect(0, 0, self.buttonWidth, self.buttonHeight))
         .states_([["OFF", Color.black, Color.grey], ["ON", Color.black, Color.red]])
         .action_({|butt|
             if (butt.value == 1, {
                 // launch synth
-                channel.patchSynth = Synth(\StereoPair, [
-                    inBusA: ~model.mixedOutBusses[2*i],
-                    inBusB: ~model.mixedOutBusses[2*i+1],
-                    outBus: 0
-                ]);
+                self.launchSynth(channel);
             }, {
                 // free synth
                 channel.patchSynth.free;
+                channel.patchSynth = nil;
+                // the model too
+                model.patchSynths[channel.index] = nil;
             });
         });
 
     });
+
+    // launch synth func
+    self.launchSynth = {|self, channel|
+
+        channel.patchSynth = Synth(self.patchSynthName, [
+                inBusA: channel.inBusA,
+                inBusB: channel.inBusB,
+                outBus: self.outBus,
+                outPos: channel.index.mod(2).linlin(0,1,-0.5,0.5)
+        ]);
+
+        model.patchSynths[channel.index] = channel.patchSynth;
+    };
+
+    // create patch synth buttons
+    self.patchSynthSelectorButtons = self.patchList.collect({|synthName, i|
+
+        Button(self.win, Rect(self.paddingFromEdge, i*38 + self.buttonHeight + self.paddingFromEdge + self.paddingFromEdge + 10, self.win.bounds.width - self.paddingFromEdge - self.paddingFromEdge, 30))
+        .states_([[synthName, Color.black, Color.grey(0.2)], [synthName, Color.black, Color.gray(0.5)]])
+        .action_({|butt|
+
+            // set name
+            self.patchSynthName = synthName;
+            model.patchSynthName = synthName;
+
+            // free synths
+            self.channels.do({|channel|  if (channel.button.value == 1, {channel.patchSynth.free})});
+
+            // launch synths
+            self.channels.do({|channel| if (channel.button.value == 1, {self.launchSynth(channel)})});
+
+            // turn off all other buttons radio group style
+            self.patchSynthSelectorButtons.do({|otherButt| if (butt != otherButt, {otherButt.value_(0)})});
+
+        });
+    });
+
+    // init patchSynthName
+    self.patchSynthSelectorButtons[self.patchList.indexOf(if (model.patchSynthName.isNil.not) {model.patchSynthName} {\PairRingerStereo})].valueAction_(1);
+
+    // init channels
+    self.channels.do({|channel| if (model.patchSynths[channel.index].isNil.not, {channel.button.value_(1); channel.patchSynth = model.patchSynths[channel.index]})});
 
     // keyboard action
     self.win.view.keyDownAction_({|view, char, mod, unicode, keycode, key|
@@ -936,6 +998,8 @@ shape and offset / level for vatrol
 vatrol shape plot
 lettering "VACTROL"
 asymmetry
+
+ -> needs an update function to respond to model changes
 
 */
 
@@ -1002,6 +1066,10 @@ asymmetry
     self.bigKnob.action_({|knob|
 
         // set all synths
+        model.setSynthMaster(\vactrolHysteresisA, self.spec.map(knob.value));
+        model.setSynthMaster(\vactrolHysteresisB, self.spec.map(knob.value));
+
+/*        // set all synths
         model.synths.do({|synth|
 
             if (synth.notNil) {
@@ -1009,7 +1077,7 @@ asymmetry
                 model.setSynth(synth, \vactrolHysteresisB, self.spec.map(knob.value));
             }
 
-        });
+        });*/
 
         // text
         self.bigKnobText.string_(self['stringFormat'].value(self.spec.map(knob.value)));
@@ -1082,6 +1150,15 @@ asymmetry
     self.offsetKnob = Knob(self.win, Rect(self.win.bounds.width-self.smallKnobPadding-self.smallKnobSize, self.smallKnobPadding+self.smallKnobPaddingFromTop+self.smallKnobSize, self.smallKnobSize, self.smallKnobSize));
     self.offsetKnob.color_(self.offsetKnob.color.put(1, Color.grey));
 
+    // init from first synth
+    model.synths[0].get(\vactrolHysteresisA, {|val|
+        {
+        self.bigKnob.value_(self.spec.unmap(val));
+        self.bigKnobText.string_(self['stringFormat'].value(val));
+        self.bigKnobText.stringColor_(self['stringFormatColor'].value(val));
+        }.defer;
+    });
+
     // return self
     self
 
@@ -1117,7 +1194,7 @@ asymmetry
 // synthdef to make data
 SynthDef(\makeData, {|dataBuff, mu, attack = 0.1, decay = 1|
     var sig = LFPulse.ar(44100.0/mu);
-    RecordBuf.ar(Vactrol.ar(sig, attack: attack, decay: decay, depth: 1), dataBuff, doneAction: 2, loop: 0);
+    RecordBuf.ar(Vactrol.pdplot(sig, attack: attack, decay: decay, depth: 1), dataBuff, doneAction: 2, loop: 0);
 }).add;
 
 );
@@ -1210,8 +1287,8 @@ SynthDef(\makeData, {|dataBuff, mu, attack = 0.1, decay = 1|
 
     // attack knob
     self.attackKnob = Knob(self.win, Rect(self.knobSize.neg/2+self.center,self.attackLabel.bounds.bottom+self.paddingBetweenLabelAndKnob,self.knobSize,self.knobSize));
-    self.attackKnob.color_(self.attackKnob.color.put(1, Color.white).put(2, Color.black)).value_(\vactrolAttackA.asSpec.unmap(self.attack))
-    .action_({|knob| model.setSynthMaster(\vactrolAttack, \vactrolAttackA.asSpec.map(knob.value), knob)});
+    self.attackKnob.color_(self.attackKnob.color.put(1, Color.white).put(2, Color.black)).value_(\vactrolAttackAB.asSpec.unmap(self.attack))
+    .action_({|knob| model.setSynthMaster(\vactrolAttackAB, \vactrolAttackAB.asSpec.map(knob.value), knob)});
 
     // attack text
     self.attackText = StaticText(self.win, Rect(self.numBoxWidth.neg/2+self.center,self.attackKnob.bounds.bottom+self.paddingBetweenKnobAndText,self.numBoxWidth,self.numBoxHeight))
@@ -1231,8 +1308,8 @@ SynthDef(\makeData, {|dataBuff, mu, attack = 0.1, decay = 1|
 
     // decay knob
     self.decayKnob = Knob(self.win, Rect(self.knobSize.neg/2+self.center,self.decayLabel.bounds.bottom+self.paddingBetweenLabelAndKnob,self.knobSize,self.knobSize));
-    self.decayKnob.color_(self.decayKnob.color.put(1, Color.white).put(2, Color.black)).value_(\vactrolDecayA.asSpec.unmap(self.decay))
-    .action_({|knob| model.setSynthMaster(\vactrolDecay, \vactrolDecayA.asSpec.map(knob.value), knob)});
+    self.decayKnob.color_(self.decayKnob.color.put(1, Color.white).put(2, Color.black)).value_(\vactrolDecayAB.asSpec.unmap(self.decay))
+    .action_({|knob| model.setSynthMaster(\vactrolDecayAB, \vactrolDecayAB.asSpec.map(knob.value), knob)});
 
     // decay text
     self.decayText = StaticText(self.win, Rect(self.numBoxWidth.neg/2+self.center,self.decayKnob.bounds.bottom+self.paddingBetweenKnobAndText,self.numBoxWidth,self.numBoxHeight))
@@ -1383,10 +1460,10 @@ SynthDef(\makeData, {|dataBuff, mu, attack = 0.1, decay = 1|
             param = args[0]; value = args[1]; whoChangedIt = args[2];
 
             // update GUI: vactrolAttack
-            if (param == \vactrolAttack) {
+            if (param == \vactrolAttackAB) {
 
                 // set knob
-                if (whoChangedIt != self.attackKnob) {self.attackKnob.value_(\vactrolAttackA.asSpec.unmap(value))};
+                if (whoChangedIt != self.attackKnob) {self.attackKnob.value_(\vactrolAttackAB.asSpec.unmap(value))};
 
                 // set text
                 // if (whoChangedIt != self.attackText) {self.attackText.value_(value)};
@@ -1399,10 +1476,10 @@ SynthDef(\makeData, {|dataBuff, mu, attack = 0.1, decay = 1|
                 self['updateData'].value();
 
             // update GUI: vactrolDecay
-            }{ if (param == \vactrolDecay) {
+            }{ if (param == \vactrolDecayAB) {
 
                 // set knob
-                if (whoChangedIt != self.decayKnob) {self.decayKnob.value_(\vactrolDecayA.asSpec.unmap(value))};
+                if (whoChangedIt != self.decayKnob) {self.decayKnob.value_(\vactrolDecayAB.asSpec.unmap(value))};
 
                 // set text
                 // if (whoChangedIt != self.decayText) {self.decayText.value_(value)};
@@ -1742,10 +1819,10 @@ SynthDef(\vactrolLED, { |inBus, outBus| Out.kr(outBus, LagUD.kr(A2K.kr(InFeedbac
         self.channelRect = Rect(0, 0, self.channelWidth, self.channelHeight);
 
         // main output bus pair
-        self.mixedOutBusPair1 = Bus.new('audio', 4+0, numChannels:2);
-        self.mixedOutBusPair2 = Bus.new('audio', 6+0, numChannels:2);
-        self.mixedOutBusPair3 = Bus.new('audio', 8+0, numChannels:2);
-        self.mixedOutBusPair4 = Bus.new('audio', 10+0, numChannels:2);
+        self.mixedOutBusPair1 = Bus.new('audio', 4+14, numChannels:2);
+        self.mixedOutBusPair2 = Bus.new('audio', 6+14, numChannels:2);
+        self.mixedOutBusPair3 = Bus.new('audio', 8+14, numChannels:2);
+        self.mixedOutBusPair4 = Bus.new('audio', 10+14, numChannels:2);
 
         // create 4 channels
         self.channel1 = self.channelFactory(model.componentOutBusses[0], model.componentOutBusses[1], self.mixedOutBusPair1, self.channelRect.insetBy(40,40),                                               Color.magenta, Color.cyan);
@@ -1802,13 +1879,13 @@ SynthDef(\vactrolLED, { |inBus, outBus| Out.kr(outBus, LagUD.kr(A2K.kr(InFeedbac
     var self = ();
 
     // window
-    self.win = Window.new('~presets', Rect(900, 530, 200, 375))
+    self.win = Window.new('~presets', Rect(900, 530, 200, 575))
     .front.alwaysOnTop_(true)
     .background_(Color.black);
     self.win.drawFunc_({Pen.strokeColor_(Color.white).width_(2).strokeRect(self.win.bounds.moveTo(0,0).insetBy(2,2))});
 
     // channels
-    self.channels = 8.collect({()});
+    self.channels = 16.collect({()});
     self.channels.do({|channel, i|
 
         channel.index = i;
@@ -1853,7 +1930,7 @@ SynthDef(\vactrolLED, { |inBus, outBus| Out.kr(outBus, LagUD.kr(A2K.kr(InFeedbac
     });
 
     // save to disk
-    self.writeButton = Button(self.win, Rect(10, 8*40+10, 180, 35))
+    self.writeButton = Button(self.win, Rect(10, 12*40+10, 180, 35))
     .states_([
         ["Write to Disk", Color.black, Color.red.blend(Color.black)],
         ["Writing ", Color.black, Color.red],
@@ -1873,7 +1950,6 @@ SynthDef(\vactrolLED, { |inBus, outBus| Out.kr(outBus, LagUD.kr(A2K.kr(InFeedbac
     // return
     self
 });
-
 
 /* ~launchpad ------------------------------------------------------------------
 
@@ -1947,6 +2023,712 @@ SynthDef(\vactrolLED, { |inBus, outBus| Out.kr(outBus, LagUD.kr(A2K.kr(InFeedbac
     // return
     self
 });
+
+
+/* ~launchpad ------------------------------------------------------------------
+
+ represents parameter states as vectors for easy looking
+
+*/
+
+(
+~vectorView = { |model|
+
+    var self = ();
+
+    // params
+    self. params = [
+        // \koscFreq,
+        // \koscFreq,
+        // \koscError,
+        \lowPassPot,
+        \koscR,
+        \preAmpPot,
+        \powAmpPot,
+        \lfoPot,
+        // \lfoCapSwitch,
+        // \lfoLowPassPot,
+        // \vactrolScalar,
+        \vactrolAttack,
+        \vactrolDecay,
+        \vactrolHysteresis,
+        \vactrolDepth,
+        // \koscGate,
+        // \vactrolGate,
+        // \lfoGate,
+        // \fbackX,
+        // \fbackY,
+        // \fbackZ,
+        // \outX,
+        // \outY,
+        // \outZ
+    ];
+    self.n = self.params.size;
+
+    // labels
+    self.paramLabels = Dictionary.newFrom([
+        \lowPassPot, "lop",
+        \koscR, "kosc",
+        \preAmpPot, "pre",
+        \powAmpPot, "pow",
+        \lfoPot, "lfo",
+        \vactrolAttack, "attk",
+        \vactrolDecay, "dcay",
+        \vactrolHysteresis, "hyst",
+        \vactrolDepth, "depth",
+        \outX, "x",
+        \outY, "y",
+        \outZ, "z"
+    ]);
+
+    // colors
+    self.colors = [Color.red, Color(1,0.5,0), Color.yellow, Color.green, Color.cyan, Color(0, 0.5, 1), Color.magenta, Color(0.5,0,1)];
+
+    // window
+    self.win = Window.new('p-space', Rect(30, 520, 200, 450))
+    .front.alwaysOnTop_(true)
+    .background_(Color.black);
+    self.win.drawFunc_({Pen.strokeColor_(Color.white).width_(2).strokeRect(self.win.bounds.moveTo(0,0).insetBy(2,2))});
+
+    // init channels
+    self.makeChannel = { |self, i, rect, color|
+
+        // self
+        var channel = ();
+
+        // index
+        channel.index = i;
+
+        // synth and which of pair
+        channel.msynth = model.synths[i.div(2)];
+        //channel.aorb = [\A,\B][i%2];
+
+        // channel container
+        channel.container = CompositeView(self.win, rect).resize_(5);
+
+        // channel multislider
+        channel.multislider = self.multiSlider(channel.container, rect, {1.0.rand} ! self.n, color);
+
+        // multislider action
+/*        channel.multislider.myAction = { |self2, val, index|
+            var param = self.params[index];
+            model.setSynth(channel.msynth, (param ++ channel.aorb).asSymbol, (param ++ channel.aorb).asSymbol.asSpec.map(val));
+        };*/
+
+        // multislider action
+        channel.multislider.myAction = { |self2, val, index|
+            var param = model.singleParamToPairedParam(self.params[index], channel.index);
+            model.setSynth(channel.msynth, param, param.asSpec.map(val));
+        };
+
+        // return
+        channel
+    };
+
+    // custom multislider view background
+    self.multiSliderBackground =  { |self, parent, rect, data, color|
+
+        var multi = ();
+
+        multi.view = UserView(parent, rect).background_(Color.clear).resize_(5);
+
+        // draw scaling functions
+        multi.toXpix = { |self2, val| val.linlin(0, 1, 10, multi.view.bounds.width-10)};
+        multi.toYpix = { |self2, val| multi.view.bounds.height/self.n*(val + 0.5)};
+        multi.ytoIndex = { |self2, y| y.div(multi.view.bounds.height/self.n).clip(0, n-1)};
+        multi.xtoNorm = { |self2, x| x.linlin(0, multi.view.bounds.width, 0, 1)};
+
+        // draw func
+        multi.view.drawFunc_({ |view|
+
+            // draw grid lines
+            self.n.do({ |val, i|
+                Pen.line(multi.toXpix(0)@multi.toYpix(i), multi.toXpix(1)@multi.toYpix(i)).strokeColor_(Color.grey)
+                .width_(0)
+                .lineDash_(FloatArray[4,2])
+                .smoothing_(false)
+                .stroke();
+            });
+
+            // label
+            self.n.do({ |val, i|
+                Pen.stringAtPoint(self.paramLabels[self.params[i]],
+                    multi.toXpix(0)@(multi.toYpix(i)-15),
+                    Font("Courier New", 10),
+                    Color.white);
+            });
+
+            // bounds
+/*            self.n.do({ |val, i|
+                Pen.stringAtPoint((self.params[i]++\A).asSymbol.asSpec.map(1).asString,
+                    (multi.toXpix(1)-16)@(multi.toYpix(i)-15),
+                    Font("Courier New", 10),
+                    Color.white);
+            });
+            self.n.do({ |val, i|
+                Pen.stringAtPoint((self.params[i]++\A).asSymbol.asSpec.map(0).asString,
+                    (multi.toXpix(0))@(multi.toYpix(i)-15),
+                    Font("Courier New", 10),
+                    Color.white);
+            });    */
+
+        });
+
+        // return
+        multi
+    };
+
+    // custom multislider view
+    self.multiSlider =  { |self, parent, rect, data, color|
+
+        var multi = ();
+
+        // store data
+        multi.data = data;
+
+        // custom view
+        multi.view = UserView(parent, rect).background_(Color.clear).resize_(5);
+
+        // draw scaling functions
+        multi.toXpix = { |self2, val| val.linlin(0, 1, 10, multi.view.bounds.width-10)};
+        multi.toYpix = { |self2, val| multi.view.bounds.height/self.n*(val + 0.5)};
+        multi.ytoIndex = { |self2, y| y.div(multi.view.bounds.height/self.n).clip(0, self.n-1)};
+        multi.xtoNorm = { |self2, x| x.linlin(0, multi.view.bounds.width, 0, 1)};
+
+        // draw func
+        multi.view.drawFunc_({ |view|
+
+            // draw points
+            multi.data.do({ |val, i|
+                Pen.fillColor_(color.alpha_(1.0)).fillOval(Rect(multi.toXpix(val)-3, multi.toYpix(i)-3, 6, 6));
+            });
+
+            // draw lines
+            multi.data.do({ |val, i|
+                if (i==0,
+                    {Pen.moveTo(multi.toXpix(val)@multi.toYpix(i))},
+                    {Pen.lineTo(multi.toXpix(val)@multi.toYpix(i))}
+                );
+            });
+            Pen.strokeColor_(color.alpha_(0.666)).width_(2).stroke();
+        });
+
+        // mouse action down
+        multi.view.mouseDownAction_({ |view, x, y|
+            var val, index;
+            // calc vals
+            index = multi.ytoIndex(y);
+            val = multi.xtoNorm(x);
+            // call action wich should set synth param
+            multi.myAction(val, index);
+            // update internal data and refresh
+            multi.data[index] = val;
+            view.refresh;
+        });
+
+        // mouse action move
+        multi.view.mouseMoveAction_({ |view, x, y|
+            var val, index;
+            // calc vals
+            index = multi.ytoIndex(y);
+            val = multi.xtoNorm(x);
+            // call action wich should set synth param
+            multi.myAction(val, index);
+            // update internal data and refresh
+            multi.data[index] = val;
+            view.refresh;
+        });
+
+        // return
+        multi
+    };
+
+    // make channels
+    self.channelbg = self.multiSliderBackground(self.win, self.win.bounds.moveTo(0,0), nil, Color.magenta);
+    self.channels = 8.collect({|i| self.makeChannel(i, self.win.bounds.moveTo(0,0), self.colors.reverse[i])});
+
+    // turn off 5-8
+    // self.channels[4].container.visible_(false);
+    // self.channels[5].container.visible_(false);
+    // self.channels[6].container.visible_(false);
+    // self.channels[7].container.visible_(false);
+
+    // keyboard action
+    self.win.view.keyDownAction_({|view, char, mod, unicode, keycode, key|
+
+        var index = char.asString.asInt - 1;
+
+        self.channels[index].container.front;
+
+    });
+
+    // updater
+    self.updater = { arg model, whatChanged ... args;
+
+        // respond to setSynth
+        if (whatChanged == \setSynth) {
+
+            var synthIndex, param, paramHat, value, channel, paramListIndex;
+
+            // unpack args
+            synthIndex = args[0]; param = args[1]; value = args[2];
+
+            // convert from paired param to single param
+            paramHat = model.pairedParamToSingleParam(param);
+
+            // find index of changed param in param list
+            paramListIndex = self.params.indexOf(paramHat);
+
+            // if it is in the active param list update
+            if (paramListIndex.notNil) {
+
+                // if it is either B or neither set +1
+                if (param.asString.endsWith("A").not) {
+
+                    // which channel
+                    channel = self.channels[(synthIndex*2+1)];
+
+                    // update channel multislider data
+                    channel.multislider.data[paramListIndex] = param.asSpec.unmap(value);
+
+                     // refresh
+                    channel.multislider.view.refresh();
+
+                };
+
+                // if it is either A or neither set +0
+                if (param.asString.endsWith("B").not) {
+
+                    // which channel
+                    channel = self.channels[(synthIndex*2)];
+
+                    // update channel multislider data
+                    channel.multislider.data[paramListIndex] = param.asSpec.unmap(value);
+
+                    // refresh
+                    channel.multislider.view.refresh();
+                };
+            }
+        };
+    };
+
+    // add updater function to model dependant list
+    model.addDependant(self['updater']);
+
+    // init all channels
+    self.channels.do({ |channel|
+
+        self.params.do({ |param, i|
+
+            model.initGUIsforParam(channel.msynth, model.singleParamToPairedParam(param, channel.index));
+
+        });
+
+    });
+
+    // remove updater function on window close
+    self.win.onClose_({model.removeDependant(self['updater'])});
+
+    // return self
+    self
+});
+
+/* ~tone -----------------------------------------------------------------------
+
+ adjusts balance of oscillator X, Y, Z outputs
+
+*/
+
+(
+~tone = { |model|
+
+    var self = ();
+
+    // window
+    self.win = Window.new('tone', Rect(30, 520, 300, 300))
+    .front.alwaysOnTop_(true)
+    .background_(Color.black);
+    self.win.drawFunc_({Pen.strokeColor_(Color.white).width_(2).strokeRect(self.win.bounds.moveTo(0,0).insetBy(2,2))});
+
+    // sliders container
+    self.slidersContainer = UserView(self.win, self.win.bounds.moveTo(0,0).insetByRect(Rect(30, 20, 0, 10))).background_(Color.clear).resize_(5);
+
+    // x, y, z
+    self.makeChannel = { |self, param, label, index|
+
+        var channel = ();
+
+        // view container`
+        channel.container = UserView(self.slidersContainer,
+            Rect(self.slidersContainer.bounds.width/3*index, 0, self.slidersContainer.bounds.width/3, self.slidersContainer.bounds.height))
+        .background_(Color.clear).resize_(5);
+
+        // slider
+        channel.slider = Slider(channel.container, channel.container.bounds.moveTo(0,0).insetByRect(Rect(15,36,0,0)))
+        .background_(Color.clear)
+        .focusColor_(Color.clear)
+        .knobColor_(Color.black)
+        .value_(0.8);
+
+        // slider action
+        channel.slider.action_({|slider| model.setSynthMaster(param, slider.value.bilin(0.8,0.0,1.0,1.0,0.0,2.0), self)}); // not going through spec so can > 1
+
+        // number box
+        channel.number = NumberBox(channel.container,
+            Rect(channel.container.bounds.moveTo(0,0).left+15,
+                channel.container.bounds.moveTo(0,0).bottom-20,
+                channel.container.bounds.moveTo(0,0).width-30,
+                20))
+        .value_(0.0)
+        .font_(Font("Courier New", 11))
+        .stringColor_(Color.white)
+        .normalColor_(Color.white)
+        .background_(Color.clear)
+        .align_(\center);
+
+        // number action
+        channel.number.action_({|numbox| model.setSynthMaster(param, numbox.value.dbamp, self)}); // not going through spec so can > 1
+
+        StaticText(channel.container,
+            Rect(channel.container.bounds.moveTo(0,0).left+15,
+                channel.container.bounds.moveTo(0,0).top,
+                channel.container.bounds.moveTo(0,0).width-30,
+                20))
+        .string_(label)
+        .stringColor_(Color.white)
+        .font_(Font("Courier New", 24))
+        .align_(\center);
+
+        // return
+        channel
+    };
+
+    // make channels
+    self.x = self.makeChannel(\outXAB, 'x', 0);
+    self.y = self.makeChannel(\outYAB, 'y', 1);
+    self.z = self.makeChannel(\outZAB, 'z', 2);
+    self.channels = [self.x, self.y, self.z];
+
+    // updater
+    self.updater = { arg model, whatChanged ... args;
+
+        // respond to setSynth
+        if (whatChanged == \setSynthMaster) {
+
+            var param, paramHat, value, whoChangedIt, channel;
+
+            // unpack args
+            param = args[0]; value = args[1]; whoChangedIt = args[2];
+
+            // which channel
+            channel = self.channels[[\outXAB, \outYAB, \outZAB].indexOf(param)];
+
+            // convert from single param to paired param for spec
+            paramHat = model.singleParamToPairedParam(param,0);
+
+            // if it is in the active param list update
+            if (channel.isNil.not) {
+
+                // update slider
+                channel.slider.value = value.bilin(1.0,0.0,2.0,0.8,0.0,1.0); // not going through spec so can > 1
+
+                 // update text
+                channel.number.value = value.ampdb; // not going through spec so can > 1
+            };
+        };
+    };
+
+    // add updater function to model dependant list
+    model.addDependant(self['updater']);
+
+    // init master params
+    model.setSynthMasterJustDependants(\outXAB,
+        if (model.masterParams[\outXABMaster].isNil.not) {model.masterParams[\outXABMaster]} {1},
+        self);
+
+    model.setSynthMasterJustDependants(\outYAB,
+        if (model.masterParams[\outYABMaster].isNil.not) {model.masterParams[\outYABMaster]} {1},
+        self);
+
+    model.setSynthMasterJustDependants(\outZAB,
+        if (model.masterParams[\outZABMaster].isNil.not) {model.masterParams[\outZABMaster]} {0},
+        self);
+
+    // remove updater function on window close
+    self.win.onClose_({model.removeDependant(self['updater'])});
+
+    // return self
+    self
+});
+
+/* ~timeWarp -------------------------------------------------------------------
+
+note: if set hysteresis when timeWarp is open and it will intercept BUT once
+      timeWarp is closed the values are set directly. all other views show
+      hysteresis value pre-warp, so if timeWarp is open they are lying to you
+
+*/
+
+(
+~timeWarp = {|model|
+
+    var self = ();
+
+    // formatting
+    self.bigKnobSize = 300;
+
+    // spec
+    self.spec = ControlSpec(1, 24*60*60, \exp);
+
+    // log scale
+    self.ticks = ((1..10) * 1) ++ ((1..10) * 60) ++ ((1..10) * 60*60);
+
+    // window
+    self.win = Window.new('time warp', Rect(100, 500, 450, 400))
+    .front.alwaysOnTop_(true)
+    .background_(Color.black)
+    .drawFunc_({Pen.strokeColor_(Color.white).width_(2).strokeRect(self.win.bounds.moveTo(0,0).insetBy(2,2))});
+
+    // helpers
+    self.stringFormat = {|val|
+
+        if (val < 60) {
+            val.asStringPrec(3) ++ " sec";
+        } { if (val < (60*60)) {
+            (val/60).asStringPrec(3) ++ " min";
+        } {
+            (val / (60*60)).asStringPrec(3) ++ " hour"
+        }}};
+
+    // helpers
+    self.stringFormatColor = {|val|
+
+        if (val < 60) {
+            Color.magenta;
+        } { if (val < (60*60)) {
+            Color.cyan;
+        } {
+            Color.yellow;
+        }}};
+
+    // timeWarp
+    self.timeWarp = 1.0;
+
+    // big knob view
+    self.bigKnobView = UserView(self.win, Rect(75, 90, self.bigKnobSize, self.bigKnobSize))
+    .background_(Color.clear);
+
+    // text
+    StaticText(self.win, Rect(0, 10, self.win.bounds.width, 50))
+    .string_("T I M E - W A R P")
+    .stringColor_(Color.white)
+    .font_(Font("Courier New", 36))
+    .align_(\center);
+
+    // big knob
+    self.bigKnob = Knob(self.bigKnobView, Rect(self.bigKnobView.bounds.width*0.10, self.bigKnobView.bounds.height*0.10, self.bigKnobView.bounds.width*0.80, self.bigKnobView.bounds.width*0.80));
+    self.bigKnob.color_(self.bigKnob.color.put(1, Color.white));
+    self.bigKnob.color_(self.bigKnob.color.put(2, Color.clear));
+
+    // init to 1
+    self.bigKnob.value_(0.5);
+
+    // big knob text
+    self.bigKnobText = StaticText(self.bigKnobView, Rect(self.bigKnobView.bounds.width/2-35, self.bigKnobView.bounds.height-40, 70, 20))
+    .string_("x 1.00").stringColor_(Color.white).align_(\center);
+
+    // big knob action
+    self.bigKnob.action_({|knob|
+
+        // map from norm to 0, 10 with center 1
+        var val = knob.value.bilin(0.5, 0.0, 1.0, 1.0, 0.0, 10.0);
+
+        // store local
+        self.timeWarp = val;
+
+        // store in the model
+        model.masterParams.add(\timeWarpMaster -> self.timeWarp);
+
+        // scale synth hysteresis values
+        self.channels.do({ |channel| ~model.setSynth(channel.msynth, (\vactrolHysteresis++channel.aorb).asSymbol, channel.valueUnwarped * self.timeWarp, self)});
+
+        // text
+        self.bigKnobText.string_('x ' ++ self.timeWarp.asStringPrec(3));
+
+    });
+
+    // draw
+    self.bigKnobView.drawFunc_({|view|
+
+        // draw regions
+        self.spec.unmap([1, 60, 60*60, 60*60*24]).doAdjacentPairs({|val1, val2, color|
+
+            var theta1, theta2, theta3, theta4;
+
+            theta1 = val1.linlin(0, 1, 0.65pi, 2.35pi);
+            theta2 = val2.linlin(0, 1, 0.65pi, 2.35pi);
+            theta3 = val1.linlin(0, 1, -0.35pi, 1.35pi);
+            theta4 = val2.linlin(0, 1, -0.35pi, 1.35pi);
+
+            Pen.addAnnularWedge(view.bounds.moveToPoint(0@0).center,
+                0.85*view.bounds.width/2,
+                0.9*view.bounds.width/2,
+                theta1,
+                theta2-theta1);
+
+            Pen.fillColor_([Color.magenta, Color.cyan, Color.yellow][color].alpha_(0.5)).fill();
+
+        });
+
+        // draw plot line for the 8 synths
+        Pen.addAnnularWedge(view.bounds.moveToPoint(0@0).center,
+            0.99*view.bounds.width/2,
+            1.0*view.bounds.width/2,
+            0.65pi,
+            1.7pi);
+
+        Pen.fillColor_(Color.white.alpha_(0.666)).fill();
+
+        // draw ticks
+        self.ticks.do({|val|
+
+            var theta = self.spec.unmap(val).linlin(0, 1, -0.32pi, 1.35pi);
+
+            Pen.rotate(theta, view.bounds.moveToPoint(0@0).center.x, view.bounds.moveToPoint(0@0).center.y);
+            Pen.moveTo((0.35@1)*view.bounds.moveToPoint(0@0).center);
+            Pen.lineTo((0.17@1)*view.bounds.moveToPoint(0@0).center);
+            Pen.color_(Color.white).smoothing_(true).width_(2).stroke();
+            Pen.rotate(-1*theta, view.bounds.moveToPoint(0@0).center.x, view.bounds.moveToPoint(0@0).center.y);
+
+        });
+    });
+
+    // channels
+    self.makeChannel = {|self, i|
+
+        // self
+        var channel = ();
+
+        // index
+        channel.index = i;
+
+        // synth and which of pair
+        channel.msynth = model.synths[i.div(2)];
+        channel.aorb = [\A,\B][i%2];
+
+        // channel container
+        channel.container = UserView(self.win, self.bigKnobView.bounds + Rect(-20, -20, 40, 40)).background_(Color.clear).acceptsMouse_(false);
+
+        // data
+        channel.valueUnwarped = nil;
+
+        // drawFunc
+        channel.container.drawFunc_({ |view|
+
+            // don't draw if null value
+            if (channel.valueUnwarped.isNil.not, {
+
+                var theta = self.spec.unmap(channel.valueUnwarped * self.timeWarp).linlin(0, 1, -0.32pi, 1.35pi);
+
+                Pen.rotate(theta, view.bounds.moveToPoint(0@0).center.x, view.bounds.moveToPoint(0@0).center.y);
+                Pen.moveTo((0.12@1)*view.bounds.moveToPoint(0@0).center);
+                Pen.lineTo((0@1)*view.bounds.moveToPoint(0@0).center);
+                Pen.stringAtPoint(channel.index.asString, (0.14@1)*view.bounds.moveToPoint(0@0).center, Font("Arial", 11), Color.white);
+                Pen.color_(Color.red.alpha_(0.666)).smoothing_(true).width_(2).stroke();
+                Pen.rotate(-1*theta, view.bounds.moveToPoint(0@0).center.x, view.bounds.moveToPoint(0@0).center.y);
+                });
+        });
+
+        // return
+        channel
+    };
+
+    // channels
+    self.channels = 8.collect({|i| self.makeChannel(i)});
+
+    // turn off 5-8
+    self.channels[4].container.visible_(false);
+    self.channels[5].container.visible_(false);
+    self.channels[6].container.visible_(false);
+    self.channels[7].container.visible_(false);
+
+    // updater
+    self.updater = { arg model, whatChanged ... args;
+
+        // respond to setSynth
+        if (whatChanged == \setSynth) {
+
+            var synthIndex, param, value, channel, whichSynth, whoChangedIt;
+
+            // unpack args
+            synthIndex = args[0]; param = args[1]; value = args[2]; whichSynth = args[3]; whoChangedIt = args[4];
+
+            // if it is hysteresis
+            if (param == \vactrolHysteresisA, {
+
+                // which channel
+                channel = self.channels[synthIndex*2 + 0];
+
+                 // only update unwarped value if it wasn't me
+                if (whoChangedIt != self, {channel.valueUnwarped = value});
+
+                // refresh
+                channel.container.refresh();
+
+            });
+            if (param == \vactrolHysteresisB, {
+
+                // which channel
+                channel = self.channels[synthIndex*2 + 1];
+
+                // only update unwarped value if it wasn't me
+                if (whoChangedIt != self, {channel.valueUnwarped = value});
+
+                // refresh
+                channel.container.refresh();
+
+            });
+        };
+
+        // respond to setSynthMaster
+        if (whatChanged == \setSynthMaster) {
+
+            var param, value, whoChangedIt;
+
+            // unpack args
+            param = args[0]; value = args[1]; whoChangedIt = args[2];
+
+            // respond to timeWarp
+            if (param == \timeWarp, {
+
+                // do knob action if it wasn't me (usually we don't do the action) (and have to map inverse of knob action bilin map)
+                if (whoChangedIt != self.bigKnob, {self.bigKnob.valueAction_(value.bilin(1.0, 0.0, 10.0, 0.5, 0.0, 1.0))});
+
+            });
+        };
+    };
+
+    // add updater function to model dependant list
+    model.addDependant(self['updater']);
+
+    // init timeWarp and knob first
+    self.timeWarp = if (model.masterParams[\timeWarpMaster].isNil.not, {model.masterParams[\timeWarpMaster]}, {self.timeWarp});
+    self.bigKnob.value_(self.timeWarp.bilin(1.0, 0.0, 10.0, 0.5, 0.0, 1.0));
+    self.bigKnobText.string_('x ' ++ self.timeWarp.asStringPrec(3));
+
+    // init all channels to pre-timeWarp value
+    self.channels.do({ |channel|
+        channel.msynth.get((\vactrolHysteresis ++ channel.aorb).asSymbol,
+            {|val| {channel.valueUnwarped = val / self.timeWarp; channel.container.refresh;}.defer});
+    });
+
+    // remove updater function on window close
+    self.win.onClose_({model.removeDependant(self['updater'])});
+
+    // return self
+    self
+});
+
 
 // return
 "06: GUIs Loaded!"
