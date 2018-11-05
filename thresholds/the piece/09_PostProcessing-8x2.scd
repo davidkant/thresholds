@@ -47,13 +47,6 @@ SynthDef(\MainChannelTanh, {
 
 }).add;
 
-/*--|----1----|----2----|----3----|----4----|----5----|----6----|----7----|----8
-
- launch mainChannelSynth to stereo DAC~ so we have sound!
-
-*/
-
-~model.mainChannelSynth = Synth(\MainChannelDCBlock);
 
 /*--|----1----|----2----|----3----|----4----|----5----|----6----|----7----|----8
 
