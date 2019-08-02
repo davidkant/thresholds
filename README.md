@@ -40,7 +40,8 @@ A collection of GUIs for interacting with and visualziang the results of the dig
 * ~tone: set X, Y, Z output levels
 * ~patchbay: patch coupled pairs through to main output
 * ~presets: store and recall states, shift-clik to store, click to recall
-  
+
+![](/extras/img/pairiscope%20animated.gif)  
 
 ### About the piece
 
